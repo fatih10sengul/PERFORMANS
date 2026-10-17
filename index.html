@@ -1971,6 +1971,106 @@ async function boot(){
   document.head.appendChild(st);
   if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
 })();
+
+// ---- Excel / CSV'den toplu sporcu ekleme
+var xlOpen=false,xlRows=null,xlMap=null;
+function trKey(t){return String(t||'').replace(/\s+/g,' ').trim().toLocaleLowerCase('tr');}
+function xlGuess(h){
+  var P=[['s',/^soyad[ıi]?$|surname|last.?name/i],['p',/pozisyon|mevki|position|post/i],['y',/do[gğ]um|yıl|yil|birth|year|d\.?\s?tarih/i],['n',/^(ad[ıi]?|isim|first.?name)$|ad[ıi]?\s*soyad|name|sporcu|oyuncu|futbolcu|player/i]],used={},m={};
+  P.forEach(function(p){m[p[0]]=-1;for(var i=0;i<h.length;i++){if(!used[i]&&p[1].test(String(h[i]))){m[p[0]]=i;used[i]=1;break;}}});
+  if(m.n<0){for(var j=0;j<h.length;j++){if(!used[j]){m.n=j;break;}}}
+  return m;
+}
+function normPos(t){
+  var x=trKey(t);if(!x)return '';
+  if(/kaleci|^gk$|goal/.test(x))return 'Kaleci';
+  if(/defans|stoper|bek|savun|^def|back/.test(x))return 'Defans';
+  if(/forvet|santrafor|kanat|h[uü]cum|^fw$|forward|striker|winger|^att/.test(x))return 'Forvet';
+  if(/orta|merkez|mid|^om$|libero/.test(x))return 'Orta saha';
+  return null;
+}
+function parseYear(v){
+  var t=String(v==null?'':v).trim();if(!t)return null;
+  var m=t.match(/(19|20)\d{2}/);if(m)return parseInt(m[0],10);
+  var n=Number(t.replace(',','.'));
+  if(isFinite(n)&&n>20000&&n<60000)return new Date(Date.UTC(1899,11,30)+Math.round(n)*864e5).getUTCFullYear();
+  m=t.match(/(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2})$/);
+  if(m){var yy=parseInt(m[3],10);return yy<=30?2000+yy:1900+yy;}
+  return null;
+}
+function xlPrep(){
+  if(!xlRows||!xlMap)return [];
+  var seen={};db.athletes.forEach(function(a){seen[trKey(a.n)]=1;});
+  var out=[];
+  xlRows.slice(1).forEach(function(r){
+    var nm=xlMap.n>=0?String(r[xlMap.n]||'').trim():'';
+    if(xlMap.s>=0&&r[xlMap.s])nm=(nm+' '+String(r[xlMap.s]).trim()).trim();
+    nm=nm.replace(/\s+/g,' ');
+    if(!nm)return;
+    var pr=xlMap.p>=0?String(r[xlMap.p]||'').trim():'',pos=pr?normPos(pr):'',yr=xlMap.y>=0?parseYear(r[xlMap.y]):null,k=trKey(nm);
+    var st=seen[k]?'dup':'new';seen[k]=1;
+    out.push({n:nm,p:pos||'Orta saha',y:yr,st:st,unk:(pr&&pos===null)?pr:'',nopos:!pr});
+  });
+  return out;
+}
+function xlToggle(){xlOpen=!xlOpen;if(!xlOpen){xlRows=null;xlMap=null;}render();}
+async function xlRead(inp){
+  var f=inp.files[0];if(!f)return;
+  var nm=f.name.toLowerCase(),rows;
+  try{
+    if(/\.(xlsx|xlsm|xls)$/.test(nm)){
+      if(!window.XLSX)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+      var wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
+      rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:false,defval:''});
+    }else{
+      rows=parseCSV((await f.text()).replace(/^﻿/,''));
+    }
+  }catch(e){toast('Dosya okunamadı. .xlsx ya da .csv dene.');return;}
+  rows=rows.filter(function(r){return r.some(function(c){return String(c).trim()!==''})});
+  if(rows.length<2){toast('Dosyada veri satırı bulunamadı.');return;}
+  xlRows=rows;xlMap=xlGuess(rows[0].map(String));render();
+}
+function xlMapSet(k,v){xlMap[k]=parseInt(v,10);render();}
+function xlDo(){
+  var list=xlPrep().filter(function(x){return x.st==='new'});
+  if(!list.length){toast('Eklenecek yeni sporcu yok.');return;}
+  list.forEach(function(x){db.athletes.push({id:uid(),n:x.n,p:x.p,y:x.y});});
+  xlOpen=false;xlRows=null;xlMap=null;save();render();toast(list.length+' sporcu eklendi. Davet kodları birkaç saniyede hazır olur.');
+}
+function dlFile(name,text,type){
+  var u=URL.createObjectURL(new Blob(['﻿'+text],{type:type||'text/csv;charset=utf-8'})),a=document.createElement('a');
+  a.href=u;a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(u);},1500);
+}
+function xlSample(){dlFile('sporcu-listesi-ornek.csv','Ad Soyad;Pozisyon;Doğum yılı\r\nAli Yılmaz;Defans;2007\r\nCan Demir;Kaleci;2008\r\nMert Kaya;Orta saha;2007\r\n');}
+async function inviteCsv(){
+  if(SYNC.dirty||SYNC.busy){toast('Kayıt sürüyor, birkaç saniye sonra tekrar dene.');return;}
+  await refreshAthleteMeta();
+  var rows=db.athletes.slice().sort(byname).map(function(a){return a.n+';'+(a.uid?'Hesap bağlı':(a.invite||'Kod yükleniyor'))+';'+(a.p||'')});
+  dlFile('davet-kodlari.csv','Ad Soyad;Davet kodu;Pozisyon\r\n'+rows.join('\r\n')+'\r\n');
+  toast('Kodlar indirildi. Her sporcuya yalnızca kendi kodunu gönder.');
+}
+function xlPanel(){
+  var h='<div class="form"><b>Excel ya da CSV\'den sporcu ekle</b><p class="dim" style="margin:6px 0">İlk satır başlık olsun: Ad Soyad, Pozisyon, Doğum yılı. Sütun sırası önemli değil. Aynı isimli sporcu tekrar eklenmez.</p>'+
+    '<label for="xl-f">Dosya seç (.xlsx, .xls, .csv)</label><input id="xl-f" type="file" accept=".xlsx,.xls,.csv,text/csv" onchange="xlRead(this)">'+
+    '<div class="row" style="margin-top:8px"><button class="btn small ghost" onclick="xlSample()">Örnek dosya indir</button></div>';
+  if(xlRows){
+    var hd=xlRows[0].map(String),opt=function(k,sel){return '<option value="-1"'+(sel<0?' selected':'')+'>Yok</option>'+hd.map(function(x,i){return '<option value="'+i+'"'+(i===sel?' selected':'')+'>'+esc(x||('Sütun '+(i+1)))+'</option>'}).join('')};
+    h+='<div class="map" style="margin-top:12px"><div><label for="xm-n">Ad (ya da Ad Soyad)</label><select id="xm-n" onchange="xlMapSet(\'n\',this.value)">'+opt('n',xlMap.n)+'</select></div><div><label for="xm-s">Soyad (ayrı sütunsa)</label><select id="xm-s" onchange="xlMapSet(\'s\',this.value)">'+opt('s',xlMap.s)+'</select></div><div><label for="xm-p">Pozisyon</label><select id="xm-p" onchange="xlMapSet(\'p\',this.value)">'+opt('p',xlMap.p)+'</select></div><div><label for="xm-y">Doğum yılı ya da tarihi</label><select id="xm-y" onchange="xlMapSet(\'y\',this.value)">'+opt('y',xlMap.y)+'</select></div></div>';
+    var L=xlPrep(),nw=L.filter(function(x){return x.st==='new'}).length,dp=L.length-nw,uk=L.filter(function(x){return x.unk&&x.st==='new'}).length;
+    h+='<p style="margin:12px 0 6px"><b>'+nw+'</b> yeni sporcu eklenecek'+(dp?', '+dp+' zaten kayıtlı ya da tekrar:':'.')+(uk?' <span class="c-warn">'+uk+' pozisyon tanınmadı, "Orta saha" olarak eklenir, sonra profilde düzeltebilirsin.</span>':'')+'</p>';
+    h+='<div class="tw"><table class="tb" style="min-width:300px"><thead><tr><th>Ad Soyad</th><th>Pozisyon</th><th>Yıl</th><th>Durum</th></tr></thead><tbody>'+L.slice(0,60).map(function(x){return '<tr><td>'+esc(x.n)+'</td><td>'+esc(x.p)+(x.unk?' <span class="dim">('+esc(x.unk)+'?)</span>':'')+'</td><td>'+(x.y||'-')+'</td><td class="'+(x.st==='new'?'c-ok':'dim')+'">'+(x.st==='new'?'Yeni':'Atlanacak')+'</td></tr>'}).join('')+'</tbody></table></div>'+(L.length>60?'<p class="dim">İlk 60 satır gösteriliyor, hepsi eklenecek.</p>':'');
+    h+='<div class="row" style="margin-top:14px"><button class="btn"'+(nw?'':' disabled')+' onclick="xlDo()">'+nw+' sporcuyu ekle</button><button class="btn ghost" onclick="xlToggle()">Vazgeç</button></div>';
+  }
+  return h+'</div>';
+}
+var _vaX=vAthletes;
+vAthletes=function(){
+  var h=_vaX();if(ROLE!=='coach')return h;
+  var row='<div class="row" style="margin-bottom:8px"><button class="btn ghost" onclick="xlToggle()">'+(xlOpen?'Excel formunu kapat':'Excel\'den ekle')+'</button>'+(db.athletes.length?'<button class="btn ghost" onclick="inviteCsv()">Davet kodlarını indir</button>':'')+'</div>'+(xlOpen?xlPanel():'');
+  var K='<div class="row"><button class="btn ghost" onclick="go(\'entry\')">';
+  return h.indexOf(K)>-1?h.replace(K,row+K):h.replace('</p>','</p>'+row);
+};
+
 boot();
 
 </script>
