@@ -1992,6 +1992,7 @@ async function boot(){
       showClaim();return;
     }
     await loadAll();
+    if(ROLE==='coach'&&collapseBody())save();
     if(ROLE==='athlete'){ME=db.athletes[0]?db.athletes[0].id:null;selA=ME;}
     authHide();chrome();
     view=ROLE==='athlete'?'me':'athletes';
@@ -2366,7 +2367,7 @@ function txPrep(){
     }else if(txAdd){var nc={id:null,nk:'n:'+k,tok:tk,isNew:true,name:nTitle(raw[k].nm)};cans.push(nc);map[k]=nc;}
     else{map[k]=null;unk[raw[k].nm.trim()]=1;}
   });
-  var rowsM={},order=[],newM={},upA={},vals=0;
+  var rowsM={},order=[],newM={},upA={},vals=0,bodyM={};
   recs.forEach(function(r){
     if(!r.k)return;var c=map[r.k];if(!c)return;
     var pos=r.pr?normPos(r.pr):'';
@@ -2381,21 +2382,55 @@ function txPrep(){
       if(r.tk.length>c.tok.length&&tokSub(c.tok,r.tk)&&(!u.nt||r.tk.length>u.nt)){u.n=nTitle(r.nm);u.nt=r.tk.length;}
       if(!u.p&&!u.bi&&!u.n)delete upA[c.id];
     }
+    if(r.v.kilo!=null||r.v.boy!=null){
+      var cb=bodyM[cid(c)]||(bodyM[cid(c)]={c:c});
+      ['kilo','boy'].forEach(function(f){if(r.v[f]!=null&&(!cb[f+'d']||r.d>=cb[f+'d'])){cb[f]=r.v[f];cb[f+'d']=r.d;}});
+      var vv=Object.assign({},r.v);delete vv.kilo;delete vv.boy;r.v=vv;
+    }
     var n=Object.keys(r.v).length+Object.keys(r.sv).length;
     if(!n)return;
     var rk=cid(c)+'|'+r.d,x=rowsM[rk];
     if(!x){x=rowsM[rk]={a:c.a||null,nk:c.nk||null,nm:c.name||c.a.n,d:r.d,v:{},sv:{},n:0};order.push(rk);}
     Object.assign(x.v,r.v);Object.assign(x.sv,r.sv);
   });
+  Object.keys(bodyM).forEach(function(id){
+    var cb=bodyM[id],c=cb.c;
+    ['kilo','boy'].forEach(function(f){
+      if(cb[f]==null)return;
+      var rk=id+'|'+cb[f+'d'],x=rowsM[rk];
+      if(!x){x=rowsM[rk]={a:c.a||null,nk:c.nk||null,nm:c.name||c.a.n,d:cb[f+'d'],v:{},sv:{},n:0};order.push(rk);}
+      x.v[f]=cb[f];});});
   var out=order.map(function(k){var x=rowsM[k];x.n=Object.keys(x.v).length+Object.keys(x.sv).length;vals+=x.n;return x;});
   var conf=0;
   out.forEach(function(x){if(!x.a)return;
     var ex=db.records.filter(function(r){return r.a===x.a.id&&r.d===x.d})[0];
-    if(ex)Object.keys(x.v).forEach(function(k){if(ex.v[k]!=null&&Math.abs(ex.v[k]-x.v[k])>1e-9)conf++;});
+    if(ex)Object.keys(x.v).forEach(function(k){if(k!=='kilo'&&k!=='boy'&&ex.v[k]!=null&&Math.abs(ex.v[k]-x.v[k])>1e-9)conf++;});
     var es=SV().filter(function(r){return r.a===x.a.id&&r.d===x.d})[0];
     if(es)Object.keys(x.sv).forEach(function(k){if(es[k]!=null&&Math.abs(es[k]-x.sv[k])>1e-9)conf++;});});
   return {conf:conf,rows:out,badv:badv,unk:Object.keys(unk),bad:bad,vals:vals,amb:amb,newA:Object.keys(newM).map(function(k){return newM[k]}),upA:Object.keys(upA).map(function(k){return upA[k]})};
 }
+function collapseBody(){
+  var ch=false,by={};
+  db.records.forEach(function(r){if(r.v.kilo!=null||r.v.boy!=null)(by[r.a]=by[r.a]||[]).push(r);});
+  Object.keys(by).forEach(function(aid){
+    var rs=by[aid].slice().sort(function(x,y){return x.d<y.d?-1:x.d>y.d?1:0}),kr=null,br=null;
+    rs.forEach(function(r){if(r.v.kilo!=null)kr=r;if(r.v.boy!=null)br=r;});
+    var tg=kr||br,kg=kr?kr.v.kilo:null,by2=br?br.v.boy:null;
+    rs.forEach(function(r){
+      if(r===tg)return;
+      if(r.v.kilo!=null){delete r.v.kilo;ch=true;}
+      if(r.v.boy!=null){delete r.v.boy;ch=true;}
+    });
+    if(kg!=null&&tg.v.kilo!==kg){tg.v.kilo=kg;ch=true;}
+    if(by2!=null&&tg.v.boy!==by2){tg.v.boy=by2;ch=true;}
+  });
+  var n0=db.records.length;
+  db.records=db.records.filter(function(r){return Object.keys(r.v).length>0;});
+  if(db.records.length!==n0)ch=true;
+  return ch;
+}
+var _seC=saveEntry;
+saveEntry=function(){_seC();if(collapseBody()){save();render();}};
 function txReset(){txFiles=[];txAmb={};txRows=null;txMap=null;txOver=false;}
 function txToggle(){txOpen=!txOpen;if(!txOpen)txReset();render();}
 async function txReadOne(f){
@@ -2440,7 +2475,7 @@ function txDo(){
     var a=x.a||ids[x.nk];if(!a)return;
     if(Object.keys(x.v).length){
       var ex=db.records.filter(function(r){return r.a===a.id&&r.d===x.d})[0];
-      if(ex){Object.keys(x.v).forEach(function(k){if(ex.v[k]==null||txOver||Math.abs(ex.v[k]-x.v[k])<=1e-9)ex.v[k]=x.v[k];else kept++;});upd++;}
+      if(ex){Object.keys(x.v).forEach(function(k){if(ex.v[k]==null||txOver||k==='kilo'||k==='boy'||Math.abs(ex.v[k]-x.v[k])<=1e-9)ex.v[k]=x.v[k];else kept++;});upd++;}
       else{db.records.push({id:uid(),a:a.id,d:x.d,v:x.v});ins++;}
     }
     if(Object.keys(x.sv).length){
@@ -2449,6 +2484,7 @@ function txDo(){
       else{SV().push(Object.assign({id:uid(),a:a.id,d:x.d,rpe:null,dur:null,sleep:null,fat:null,sore:null,pain:[],seen:true},x.sv));svN++;}
     }
   });
+  collapseBody();
   txOpen=false;txReset();save();render();
   toast((P.newA.length?P.newA.length+' yeni sporcu, ':'')+ins+' test kaydı'+(svN+svU?', '+(svN+svU)+' anket kaydı':'')+' eklendi'+(upd?' ('+upd+' kayıt aynı güne eklendi)':'')+(kept?'; '+kept+' mevcut değer korundu':'')+'.');
 }
