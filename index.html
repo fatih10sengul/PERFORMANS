@@ -2107,6 +2107,145 @@ vAthletes=function(){
 };
 
 
+// ---- Excel / CSV'den toplu test ekleme
+var txOpen=false,txRows=null,txMap=null,txNm=-1,txSn=-1,txDt=-1;
+var TPL={s10:'10 m sprint (s)',s20:'20 m sprint (s)',s30:'30 m sprint (s)',cmjH:'CMJ yükseklik (cm)',cmjT:'CMJ süre (ms)',sjH:'SJ yükseklik (cm)',djD:'DJ düşüş yüksekliği (cm)',djH:'DJ sıçrama yüksekliği (cm)',djGct:'DJ yer temas (ms)',agR:'5-0-5 sağ (s)',agL:'5-0-5 sol (s)',slR:'Tek bacak hop sağ (cm)',slL:'Tek bacak hop sol (cm)',hopH:'Hop yükseklik (cm)',hopGct:'Hop yer temas (ms)',vmax:'Maks hız (km/sa)',ift:'30-15 IFT (km/sa)'};
+var TALT={s10:['10m','s10','sprint10','10msprint'],s20:['20m','s20','sprint20'],s30:['30m','s30','sprint30'],cmjH:['cmj','cmjh','cmjyukseklik','cmjsicrama','cmjsicramayuksekligi'],cmjT:['cmjt','cmjsure','cmjkalkis'],sjH:['sj','sjh','sjyukseklik','sjsicrama'],djD:['djdusus','djdrop','djd','djdropyuksekligi'],djH:['dj','djh','djyukseklik','djsicrama'],djGct:['djgct','djtemas','djyertemas','djyertemassuresi'],agR:['505sag','505r','ag505sag','505sagbacak'],agL:['505sol','505l','ag505sol','505solbacak'],slR:['tekbacaksag','slsag','slr','singlelegsag','tekbacakhopsag'],slL:['tekbacaksol','slsol','sll','singlelegsol','tekbacakhopsol'],hopH:['hop','hopyukseklik','hopyuksekligi','hopsicrama'],hopGct:['hopgct','hoptemas','hopyertemas'],vmax:['vmax','maxhiz','maxspeed','maksimumhiz','maksimumsprinthizi','maxsprinthizi','maksimumhiz'],ift:['ift','vift','3015','3015ift']};
+function trAscii(t){return String(t==null?'':t).replace(/\([^)]*\)/g,' ').toLocaleLowerCase('tr').replace(/ı/g,'i').replace(/ç/g,'c').replace(/ğ/g,'g').replace(/ö/g,'o').replace(/ş/g,'s').replace(/ü/g,'u').replace(/[^a-z0-9]/g,'');}
+function txFieldKeys(){var o=[];T.forEach(function(g){g.f.forEach(function(f){o.push(f[0]);});});return o;}
+function txFieldLabel(k){var r=k;T.forEach(function(g){g.f.forEach(function(f){if(f[0]===k)r=g.n+' · '+f[1]+' ('+f[2]+')';});});return r;}
+function txGuessField(h){
+  var x=trAscii(h);if(!x)return '';
+  var ks=txFieldKeys();
+  for(var i=0;i<ks.length;i++){var k=ks[i];if(trAscii(TPL[k]||'')===x||trAscii(k)===x||(TALT[k]||[]).map(trAscii).indexOf(x)>-1)return k;}
+  return '';
+}
+function txGuess(hd){
+  var nm=-1,sn=-1,dt=-1;
+  hd.forEach(function(h,i){var x=trAscii(h);
+    if(dt<0&&/^(tarih|testtarihi|date|testgunu)$/.test(x))dt=i;
+    else if(sn<0&&/^(soyad|soyadi|surname|lastname)$/.test(x))sn=i;
+    else if(nm<0&&/^(ad|adi|isim|name|firstname|adsoyad|adisoyadi|sporcu|oyuncu|futbolcu|player)$/.test(x))nm=i;});
+  if(nm<0)for(var j=0;j<hd.length;j++){if(j!==sn&&j!==dt&&!txGuessField(hd[j])){nm=j;break;}}
+  var map=hd.map(function(h,i){return (i===nm||i===sn||i===dt)?'':txGuessField(h);});
+  return {nm:nm,sn:sn,dt:dt,map:map};
+}
+function txDate(v){
+  if(v==null||v==='')return null;
+  if(v instanceof Date&&!isNaN(v))return v.getFullYear()+'-'+('0'+(v.getMonth()+1)).slice(-2)+'-'+('0'+v.getDate()).slice(-2);
+  if(typeof v==='number'){if(v>20000&&v<80000){var d=new Date(Date.UTC(1899,11,30)+Math.round(v)*864e5);return d.getUTCFullYear()+'-'+('0'+(d.getUTCMonth()+1)).slice(-2)+'-'+('0'+d.getUTCDate()).slice(-2);}return null;}
+  var t=String(v).trim(),m=t.match(/^(\d{4})[-.\/](\d{1,2})[-.\/](\d{1,2})/);
+  if(m)return m[1]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[3]).slice(-2);
+  m=t.match(/^(\d{1,2})[-.\/](\d{1,2})[-.\/](\d{2,4})/);
+  if(m){var y=parseInt(m[3],10);if(y<100)y+=2000;var a=parseInt(m[1],10),b=parseInt(m[2],10);if(a<1||a>31||b<1||b>12)return null;return y+'-'+('0'+b).slice(-2)+'-'+('0'+a).slice(-2);}
+  if(/^\d{5}$/.test(t))return txDate(Number(t));
+  return null;
+}
+function txNum(v){
+  if(typeof v==='number')return isFinite(v)&&v>0?v:null;
+  var t=String(v==null?'':v).trim().replace(',','.');if(!t)return null;
+  var n=parseFloat(t);return isFinite(n)&&n>0?n:null;
+}
+function txPrep(){
+  if(!txRows||!txMap)return null;
+  var idx={};db.athletes.forEach(function(a){idx[trKey(a.n)]=a;});
+  var out=[],unk={},bad=0,vals=0,defDate=document.getElementById('tx-d')?document.getElementById('tx-d').value:'';
+  txRows.slice(1).forEach(function(r){
+    var nm=txNm>=0?String(r[txNm]==null?'':r[txNm]).trim():'';
+    if(txSn>=0&&r[txSn])nm=(nm+' '+String(r[txSn]).trim()).trim();
+    nm=nm.replace(/\s+/g,' ');if(!nm)return;
+    var d=txDt>=0?txDate(r[txDt]):(defDate||today());
+    var v={},n=0;
+    txMap.forEach(function(k,i){if(!k)return;var x=txNum(r[i]);if(x!=null){v[k]=x;n++;}});
+    if(!n)return;
+    var a=idx[trKey(nm)];
+    if(!a){unk[nm]=1;return;}
+    if(!d){bad++;return;}
+    out.push({a:a,d:d,v:v,n:n});vals+=n;
+  });
+  return {rows:out,unk:Object.keys(unk),bad:bad,vals:vals};
+}
+function txToggle(){txOpen=!txOpen;if(!txOpen){txRows=null;txMap=null;}render();}
+async function txRead(inp){
+  var f=inp.files[0];if(!f)return;
+  var nm=f.name.toLowerCase(),rows;
+  try{
+    if(/\.(xlsx|xlsm|xls)$/.test(nm)){
+      if(!window.XLSX)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+      var wb=XLSX.read(await f.arrayBuffer(),{type:'array',cellDates:true});
+      rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:''});
+    }else{rows=parseCSV((await f.text()).replace(/^﻿/,''));}
+  }catch(e){toast('Dosya okunamadı. .xlsx ya da .csv dene.');return;}
+  rows=rows.filter(function(r){return r.some(function(c){return String(c).trim()!==''})});
+  if(rows.length<2){toast('Dosyada veri satırı bulunamadı.');return;}
+  var g=txGuess(rows[0].map(String));
+  txRows=rows;txMap=g.map;txNm=g.nm;txSn=g.sn;txDt=g.dt;render();
+}
+function txSet(w,i,v){
+  if(w==='m')txMap[i]=v;else{var n=parseInt(v,10);if(w==='n')txNm=n;else if(w==='s')txSn=n;else txDt=n;
+    txMap=txMap.map(function(k,j){return (j===txNm||j===txSn||j===txDt)?'':k;});}
+  render();
+}
+function txDo(){
+  var P=txPrep();if(!P||!P.rows.length){toast('Eklenecek test verisi yok.');return;}
+  var ins=0,upd=0;
+  P.rows.forEach(function(x){
+    var ex=db.records.filter(function(r){return r.a===x.a.id&&r.d===x.d})[0];
+    if(ex){ex.v=Object.assign({},ex.v,x.v);upd++;}
+    else{db.records.push({id:uid(),a:x.a.id,d:x.d,v:x.v});ins++;}
+  });
+  txOpen=false;txRows=null;txMap=null;save();render();
+  toast(ins+' yeni test kaydı eklendi'+(upd?', '+upd+' kayıt güncellendi':'')+'.');
+}
+function txSample(){
+  var ks=txFieldKeys(),n=db.athletes.slice().sort(byname).slice(0,3).map(function(a){return a.n});
+  if(!n.length)n=['Ali Yılmaz','Can Demir'];
+  var rows=n.map(function(x){return x+';'+today()+';'+ks.map(function(){return ''}).join(';');});
+  dlFile('test-sablonu.csv','Ad Soyad;Tarih;'+ks.map(function(k){return TPL[k]}).join(';')+'\r\n'+rows.join('\r\n')+'\r\n');
+}
+function txPanel(){
+  var h='<div class="form"><b>Excel ya da CSV\'den test ekle</b><p class="dim" style="margin:6px 0">İlk satır başlık olsun. Her satır bir sporcunun bir günkü testi: Ad Soyad, Tarih ve test sütunları (CMJ, sprint vb.). Boş hücreler atlanır. Sütun sırası önemli değil, tanınmayan sütunu aşağıdan seçersin. Sporcunun adı uygulamadaki ad ile aynı olmalı.</p>'+
+    '<label for="tx-f">Dosya seç (.xlsx, .xls, .csv)</label><input id="tx-f" type="file" accept=".xlsx,.xls,.csv,text/csv" onchange="txRead(this)">'+
+    '<div class="row" style="margin-top:8px"><button class="btn small ghost" onclick="txSample()">Boş şablon indir</button></div>';
+  if(txRows){
+    var hd=txRows[0].map(String),col=function(i){return esc(hd[i]||('Sütun '+(i+1)))};
+    var opt=function(sel){return '<option value="-1"'+(sel<0?' selected':'')+'>Yok</option>'+hd.map(function(x,i){return '<option value="'+i+'"'+(i===sel?' selected':'')+'>'+col(i)+'</option>'}).join('')};
+    h+='<div class="map" style="margin-top:12px"><div><label for="tx-n">Ad (ya da Ad Soyad)</label><select id="tx-n" onchange="txSet(\'n\',0,this.value)">'+opt(txNm)+'</select></div><div><label for="tx-s">Soyad (ayrı sütunsa)</label><select id="tx-s" onchange="txSet(\'s\',0,this.value)">'+opt(txSn)+'</select></div><div><label for="tx-t">Tarih</label><select id="tx-t" onchange="txSet(\'t\',0,this.value)">'+opt(txDt)+'</select></div></div>';
+    if(txDt<0)h+='<label for="tx-d">Dosyada tarih yok, tüm testler bu tarihe yazılsın</label><input id="tx-d" type="date" value="'+today()+'" onchange="render()">';
+    h+='<p style="margin:14px 0 6px"><b>Sütun eşleştirme</b></p><div class="tw"><table class="tb" style="min-width:300px"><thead><tr><th>Excel sütunu</th><th>Test alanı</th></tr></thead><tbody>';
+    hd.forEach(function(x,i){
+      if(i===txNm||i===txSn||i===txDt)return;
+      h+='<tr><td>'+col(i)+'</td><td><select aria-label="'+col(i)+' sütunu" onchange="txSet(\'m\','+i+',this.value)"><option value="">Kullanma</option>'+txFieldKeys().map(function(k){return '<option value="'+k+'"'+(txMap[i]===k?' selected':'')+'>'+esc(txFieldLabel(k))+'</option>'}).join('')+'</select></td></tr>';
+    });
+    h+='</tbody></table></div>';
+    var P=txPrep(),dup=0;
+    P.rows.forEach(function(x){if(db.records.some(function(r){return r.a===x.a.id&&r.d===x.d}))dup++;});
+    h+='<p style="margin:12px 0 6px"><b>'+P.rows.length+'</b> test satırı, '+P.vals+' değer eklenecek'+(dup?' ('+dup+' satır aynı gün kaydı olan sporcuya ait, değerler o kayda işlenir)':'')+'.</p>';
+    if(P.unk.length)h+='<p class="c-warn" style="margin:6px 0">Uygulamada bulunmayan isimler atlandı ('+P.unk.length+'): '+esc(P.unk.slice(0,8).join(', '))+(P.unk.length>8?'…':'')+'. Önce sporcuyu ekle ya da ismi düzelt.</p>';
+    if(P.bad)h+='<p class="c-warn" style="margin:6px 0">'+P.bad+' satırın tarihi okunamadı, atlandı.</p>';
+    if(!txMap.some(function(k){return k}))h+='<p class="c-warn" style="margin:6px 0">Hiçbir test sütunu eşleşmedi. Yukarıdaki tabloda her sütun için test alanını seç.</p>';
+    h+='<div class="tw"><table class="tb" style="min-width:300px"><thead><tr><th>Sporcu</th><th>Tarih</th><th>Değer</th></tr></thead><tbody>'+P.rows.slice(0,40).map(function(x){return '<tr><td>'+esc(x.a.n)+'</td><td>'+trDate(x.d)+'</td><td>'+x.n+'</td></tr>'}).join('')+(P.rows.length>40?'<tr><td colspan="3" class="dim">… ve '+(P.rows.length-40)+' satır daha</td></tr>':'')+'</tbody></table></div>';
+    h+='<div class="row" style="margin-top:14px"><button class="btn"'+(P.rows.length?'':' disabled')+' onclick="txDo()">Testleri ekle</button><button class="btn ghost" onclick="txToggle()">Vazgeç</button></div>';
+  }
+  return h+'</div>';
+}
+function txBlock(){
+  return '<div class="row" style="margin:12px 0"><button class="btn ghost" onclick="txToggle()">'+(txOpen?'Test Excel formunu kapat':'Testleri Excel\'den ekle')+'</button></div>'+(txOpen?txPanel():'');
+}
+var _veX=vEntry;
+vEntry=function(){
+  var h=_veX();if(ROLE!=='coach')return h;
+  var i=h.indexOf('</p>');
+  return i>-1?h.slice(0,i+4)+txBlock()+h.slice(i+4):txBlock()+h;
+};
+var _vaX2=vAthletes;
+vAthletes=function(){
+  var h=_vaX2();if(ROLE!=='coach'||!db.athletes.length)return h;
+  var K='<div class="row"><button class="btn ghost" onclick="go(\'entry\')">';
+  var b='<div class="row" style="margin-bottom:8px"><button class="btn ghost" onclick="txToggle()">'+(txOpen?'Test Excel formunu kapat':'Testleri Excel\'den ekle')+'</button></div>'+(txOpen?txPanel():'');
+  return h.indexOf(K)>-1?h.replace(K,b+K):h.replace('</p>','</p>'+b);
+};
+
 // ---- Uygulama olarak yükleme (PWA)
 var DEFERRED=null;
 function isStandalone(){return (window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true;}
