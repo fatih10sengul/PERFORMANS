@@ -1633,8 +1633,12 @@ var PK=['prog','survey','tests','gps','load','inj'];
 function nn(v){return v==null||v===''?null:v;}
 var COLS=[
   {name:'athletes',table:'athletes',conflict:'id',
-    list:function(){return db.athletes.map(function(a){return {id:a.id,row:{id:a.id,name:a.n,position:nn(a.p),birth_year:nn(a.y),photo_path:nn(a.ph)}}});},
+    list:function(){return db.athletes.map(function(a){return {id:a.id,row:{id:a.id,name:a.n,position:nn(a.p),birth_year:nn(a.y)}}});},
     del:function(q,id){return q.eq('id',id);}},
+  {name:'photos',table:'athletes',conflict:'id',
+    list:function(){return db.athletes.filter(function(a){return a.ph}).map(function(a){return {id:a.id,row:{id:a.id,photo_path:a.ph}}});},
+    up:function(rows){return Promise.all(rows.map(function(r){return SBC.from('athletes').update({photo_path:r.photo_path}).eq('id',r.id)})).then(function(rs){var e=rs.filter(function(x){return x.error})[0];return e?{error:e.error}:{error:null};});},
+    delRun:function(id){return SBC.from('athletes').update({photo_path:null}).eq('id',id);}},
   {name:'injuries',table:'injuries',conflict:'athlete_id',
     list:function(){return db.athletes.filter(function(a){return a.inj}).map(function(a){return {id:a.id,row:{athlete_id:a.id,data:a.inj}}});},
     del:function(q,id){return q.eq('athlete_id',id);}},
@@ -1702,7 +1706,7 @@ async function pushAll(){
     for(var i=plan.length-1;i>=0;i--){
       var p=plan[i];
       for(var j=0;j<p.dl.length;j++){
-        var r=await p.c.del(SBC.from(p.c.table).delete(),p.dl[j]);
+        var r=await (p.c.delRun?p.c.delRun(p.dl[j]):p.c.del(SBC.from(p.c.table).delete(),p.dl[j]));
         if(r.error)throw r.error;
         delete SNAP[p.c.name][p.dl[j]];
       }
@@ -1711,7 +1715,7 @@ async function pushAll(){
     for(var i2=0;i2<plan.length;i2++){
       var p2=plan[i2];
       for(var ch of chunk(p2.up,400)){
-        var res=await SBC.from(p2.c.table).upsert(ch.map(function(x){return x.row}),{onConflict:p2.c.conflict});
+        var res=await (p2.c.up?p2.c.up(ch.map(function(x){return x.row})):SBC.from(p2.c.table).upsert(ch.map(function(x){return x.row}),{onConflict:p2.c.conflict}));
         if(res.error)throw res.error;
         ch.forEach(function(x){SNAP[p2.c.name][x.id]=x.sig;});
       }
@@ -1734,6 +1738,12 @@ async function refreshAthleteMeta(){
   var r=await SBC.from('athletes').select('id,invite_code,user_id');
   if(r.error||!r.data)return;
   r.data.forEach(function(x){var a=ath(x.id);if(a){a.invite=x.invite_code;a.uid=x.user_id;}});
+}
+
+async function refreshPhotos(){
+  var r=await SBC.from('athletes').select('id,photo_path');
+  if(r.error||!r.data)return;
+  r.data.forEach(function(x){var a=ath(x.id);if(a){if(x.photo_path)a.ph=x.photo_path;else delete a.ph;}});
 }
 
 // ---- Çekme
@@ -1788,7 +1798,7 @@ async function loadAll(){
 async function softRefresh(){
   if(!SBC||!ROLE||SYNC.busy||SYNC.dirty||document.hidden)return;
   try{
-    var names=ROLE==='coach'?['athletes','surveys','exercise_done','gps_sessions','test_records','permissions']:['surveys','exercise_done','program_days','program_exercises','permissions'];
+    var names=ROLE==='coach'?['surveys','exercise_done','gps_sessions','test_records','permissions']:['surveys','exercise_done','program_days','program_exercises','permissions'];
     var res=await Promise.all(names.map(function(n){return fetchAll(n)}));
     if(SYNC.busy||SYNC.dirty)return;
     var T={};names.forEach(function(n,i){T[n]=res[i];});
@@ -1800,7 +1810,7 @@ async function softRefresh(){
     if(T.test_records)db.records=T.test_records.map(mapRec);
     if(T.program_days&&T.program_exercises)db.prog=mapProg(T.program_days,T.program_exercises);
     if(T.permissions)db.perm=mapPerm(T.permissions);
-    if(T.athletes&&ROLE==='coach')T.athletes.forEach(function(x){var a=ath(x.id);if(a){a.invite=x.invite_code;a.uid=x.user_id;}});
+    if(ROLE==='coach'){await refreshAthleteMeta();SYNC.n=(SYNC.n||0)+1;if(SYNC.n%5===0)await refreshPhotos();}
     snapAll();
     if(before!==sig()){
       var t=document.activeElement&&document.activeElement.tagName;
@@ -1818,6 +1828,7 @@ function trErr(e){
   if(/valid email|invalid format|Unable to validate email/i.test(m))return 'Geçerli bir e-posta yaz.';
   if(/rate limit|too many/i.test(m))return 'Çok fazla deneme. Biraz bekleyip tekrar dene.';
   if(/Failed to fetch|NetworkError|Load failed/i.test(m))return 'Bağlantı yok. İnternetini kontrol et.';
+  if(/Could not find the function|PGRST202|set_my_photo/i.test(m))return 'Fotoğraf özelliği için veritabanı güncellemesi gerekiyor. Antrenörüne haber ver.';
   if(/row-level security/i.test(m))return 'Bu işlem için yetkin yok.';
   return m;
 }
@@ -1888,7 +1899,31 @@ function vMe(){
   var h=vPrev(),i=h.indexOf('<div class="grp">');
   if(i<0)i=h.indexOf('<div class="empty">');
   var body=i>=0?h.slice(i):'';
-  return '<h1>Merhaba, '+esc(a.n.split(' ')[0])+'</h1><p class="sub">'+esc(a.n)+'</p>'+body;
+  var top='<div class="row" style="align-items:center;gap:14px;margin-bottom:6px;flex-wrap:nowrap">'+av(a,80)+'<div><h1 style="margin:0">Merhaba, '+esc(a.n.split(' ')[0])+'</h1><p class="sub" style="margin:2px 0 0">'+esc(a.n)+'</p></div></div>'+
+    '<div class="row" style="margin:6px 0 16px"><label class="btn small ghost" for="myph" style="cursor:pointer">'+(a.ph?'Fotoğrafı değiştir':'Fotoğraf ekle')+'</label><input id="myph" type="file" accept="image/*" style="display:none" onchange="setMyPhoto(this)">'+(a.ph?'<button class="btn small ghost" onclick="savePhoto(null)">Kaldır</button>':'')+'</div>';
+  return top+body;
+}
+
+function setMyPhoto(inp){
+  var f=inp.files[0];if(!f)return;
+  var r=new FileReader();
+  r.onload=function(){
+    var i=new Image();
+    i.onload=function(){
+      var c=document.createElement('canvas');c.width=c.height=160;var m=Math.min(i.width,i.height);
+      c.getContext('2d').drawImage(i,(i.width-m)/2,(i.height-m)/2,m,m,0,0,160,160);
+      savePhoto(c.toDataURL('image/jpeg',.8));
+    };
+    i.onerror=function(){toast('Bu dosya fotoğraf olarak açılamadı. Başka bir fotoğraf dene.');};
+    i.src=r.result;
+  };
+  r.readAsDataURL(f);
+}
+async function savePhoto(url){
+  var rr=await SBC.rpc('set_my_photo',{p:url});
+  if(rr.error){toast(trErr(rr.error));return;}
+  var a=ath(ME);if(a){if(url)a.ph=url;else delete a.ph;}
+  snapAll();render();toast(url?'Fotoğraf kaydedildi':'Fotoğraf kaldırıldı');
 }
 
 // ---- Antrenör: davet kodu bloğu
