@@ -2470,14 +2470,15 @@ function txPanel(){
   if(txRows){
     var hd=txRows[0].map(String),col=function(i){return esc(hd[i]||('Sütun '+(i+1)))};
     var opt=function(sel){return '<option value="-1"'+(sel<0?' selected':'')+'>Yok</option>'+hd.map(function(x,i){return '<option value="'+i+'"'+(i===sel?' selected':'')+'>'+col(i)+'</option>'}).join('')};
-    h+='<div class="map" style="margin-top:12px"><div><label for="tx-n">Ad (ya da Ad Soyad)</label><select id="tx-n" onchange="txSet(\'n\',0,this.value)">'+opt(txNm)+'</select></div><div><label for="tx-s">Soyad (ayrı sütunsa)</label><select id="tx-s" onchange="txSet(\'s\',0,this.value)">'+opt(txSn)+'</select></div><div><label for="tx-t">Tarih (ölçüm / test günü)</label><select id="tx-t" onchange="txSet(\'t\',0,this.value)">'+opt(txDt)+'</select></div><div><label for="tx-p">Pozisyon</label><select id="tx-p" onchange="txSet(\'p\',0,this.value)">'+opt(txPs)+'</select></div><div><label for="tx-b">Doğum tarihi (ya da yılı)</label><select id="tx-b" onchange="txSet(\'b\',0,this.value)">'+opt(txBd)+'</select></div></div>';
+    var okAuto=txNm>=0&&(txMap.some(function(k){return k})||txPs>=0||txBd>=0);
+    h+='<details'+(okAuto?'':' open')+' style="margin-top:12px"><summary>'+(okAuto?'Sütunlar otomatik algılandı (değiştirmek için aç)':'Sütunları eşleştir')+'</summary><div class="map" style="margin-top:12px"><div><label for="tx-n">Ad (ya da Ad Soyad)</label><select id="tx-n" onchange="txSet(\'n\',0,this.value)">'+opt(txNm)+'</select></div><div><label for="tx-s">Soyad (ayrı sütunsa)</label><select id="tx-s" onchange="txSet(\'s\',0,this.value)">'+opt(txSn)+'</select></div><div><label for="tx-t">Tarih (ölçüm / test günü)</label><select id="tx-t" onchange="txSet(\'t\',0,this.value)">'+opt(txDt)+'</select></div><div><label for="tx-p">Pozisyon</label><select id="tx-p" onchange="txSet(\'p\',0,this.value)">'+opt(txPs)+'</select></div><div><label for="tx-b">Doğum tarihi (ya da yılı)</label><select id="tx-b" onchange="txSet(\'b\',0,this.value)">'+opt(txBd)+'</select></div></div>';
     if(txDt<0)h+='<label for="tx-d">Dosyada tarih yok, tüm testler bu tarihe yazılsın</label><input id="tx-d" type="date" value="'+today()+'" onchange="render()">';
     h+='<p style="margin:14px 0 6px"><b>Sütun eşleştirme</b></p><div class="tw"><table class="tb" style="min-width:300px"><thead><tr><th>Excel sütunu</th><th>Test alanı</th></tr></thead><tbody>';
     hd.forEach(function(x,i){
       if(i===txNm||i===txSn||i===txDt||i===txPs||i===txBd)return;
       h+='<tr><td>'+col(i)+'</td><td><select aria-label="'+col(i)+' sütunu" onchange="txSet(\'m\','+i+',this.value)"><option value="">Kullanma</option>'+txFieldKeys().map(function(k){return '<option value="'+k+'"'+(txMap[i]===k?' selected':'')+'>'+esc(txFieldLabel(k))+'</option>'}).join('')+'</select></td></tr>';
     });
-    h+='</tbody></table></div>';
+    h+='</tbody></table></div></details>';
   }
   h+='<label style="display:flex;gap:8px;align-items:center;margin-top:12px;color:var(--ink)"><input type="checkbox" id="tx-a"'+(txAdd?' checked':'')+' onchange="txAdd=this.checked;render()" style="width:auto"> Listede olup uygulamada olmayan sporcuları da ekle</label>';
   var P=txPrep(),dup=0;
