@@ -2169,6 +2169,7 @@ function txNum(v){
 // ---- Hazır dosya düzenlerini tanıma
 var txFiles=[],txAmb={},txAmbKeys=[];
 var TRMON={oca:1,sub:2,mar:3,nis:4,may:5,haz:6,tem:7,agu:8,eyl:9,eki:10,kas:11,ara:12};
+M.mas=['MAS','km/sa','high',1];M.asr=['ASR (MSS − MAS)','km/sa','none',1];
 M.agCtR=['5-0-5 sağ temas','ms','low',0];M.agCtL=['5-0-5 sol temas','ms','low',0];
 M.slQR=['Tek bacak hop RSI sağ','','high',2];M.slQL=['Tek bacak hop RSI sol','','high',2];M.hopAsym=['Hop RSI sağ/sol farkı','%','low',1];
 (function(){
@@ -2177,8 +2178,9 @@ M.slQR=['Tek bacak hop RSI sağ','','high',2];M.slQL=['Tek bacak hop RSI sol',''
   var b=g('Tek bacak hop');b.f.push(['slQR','Sağ bacak RSI',''],['slQL','Sol bacak RSI','']);b.m.push('slQR','slQL','hopAsym');
   g('Hop test').f.push(['hopRsi','Çift ayak RSI (hazır değer)','']);
   g('DJ').f.push(['djRsi','RSI (hazır değer)','']);
+  T.push({n:'MAS (aerobik hız)',f:[['mas','MAS','km/sa']],m:['mas','asr']});TPL.mas='MAS (km/sa)';TALT.mas=['mas','maskmsa','aerobikhiz'];
   TPL.agCtR='5-0-5 sağ temas (ms)';TPL.agCtL='5-0-5 sol temas (ms)';TPL.slQR='Tek bacak hop RSI sağ';TPL.slQL='Tek bacak hop RSI sol';TPL.hopRsi='Çift ayak hop RSI';TPL.djRsi='DJ RSI';
-  var d0=derive;derive=function(v){var o=d0(v);if(v.slQR&&v.slQL)o.hopAsym=Math.abs(v.slQR-v.slQL)/Math.max(v.slQR,v.slQL)*100;return o;};
+  var d0=derive;derive=function(v){var o=d0(v);if(v.vmax&&v.mas)o.asr=v.vmax-v.mas;if(v.slQR&&v.slQL)o.hopAsym=Math.abs(v.slQR-v.slQL)/Math.max(v.slQR,v.slQL)*100;return o;};
 })();
 function fold(t){return String(t==null?'':t).toLocaleLowerCase('tr').replace(/ı/g,'i').replace(/ç/g,'c').replace(/ğ/g,'g').replace(/ö/g,'o').replace(/ş/g,'s').replace(/ü/g,'u').replace(/[^a-z0-9]/g,'');}
 function nTok(s){var t=String(s==null?'':s).replace(/\s+/g,' ').trim();if(!t)return [];var seen={},o=[];t.split(' ').forEach(function(w){var f=fold(w);if(f&&!seen[f]){seen[f]=1;o.push(f);}});return o;}
@@ -2281,7 +2283,28 @@ function rcNamed(rows){
   var lab=ks.sprint?'Sprint 10-20-30 m':ks.vmax?'Maksimum sprint hızı':ks.agR?'5-0-5 çeviklik':'Test sütunları';
   return {kind:'named',label:lab,recs:recs};
 }
-function txDetect(rows,fn){return rcWeight(rows)||rcWeekly(rows,fn)||rcTrials(rows)||rcNamed(rows);}
+function rcMas(rows){
+  var hr=-1,ni=-1,mi=-1,si=-1;
+  for(var i=0;i<Math.min(rows.length,15)&&hr<0;i++){
+    var n=-1,m=-1,s2=-1;
+    rows[i].forEach(function(c,j){var f=fold(c);if(f==='sporcu'||f==='oyuncu'||f==='isim')n=j;else if(/^mas/.test(f))m=j;else if(/^mss/.test(f))s2=j;});
+    if(n>=0&&m>=0){hr=i;ni=n;mi=m;si=s2;}
+  }
+  if(hr<0)return null;
+  var recs=[];
+  var stop=false;
+  rows.slice(hr+1).forEach(function(r){
+    if(stop)return;
+    var nm=String(cel(r,ni)).trim();
+    if(!nm){if(recs.length)stop=true;return;}
+    var v={},a=txNum(r[mi]);if(a==null)return;v.mas=a;
+    if(si>=0){var b=txNum(r[si]);if(b!=null)v.vmax=b;}
+    recs.push({nm:nm,v:v});
+  });
+  if(!recs.length)return null;
+  return {kind:'mas',label:'MAS ve MSS',recs:recs};
+}
+function txDetect(rows,fn){return rcMas(rows)||rcWeight(rows)||rcWeekly(rows,fn)||rcTrials(rows)||rcNamed(rows);}
 
 // ---- Çözümleme ve önizleme
 function cid(c){return c.id||c.nk;}
