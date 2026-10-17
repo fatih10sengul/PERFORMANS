@@ -250,7 +250,7 @@ function vProfile(){
         var pc = prev.v ? dl/prev.v*100 : 0;
         dh='<div class="d '+cls+'">'+(dl>0?'+':'')+dl.toFixed(M[k][3])+' '+M[k][1]+' ('+(pc>0?'+':'')+pc.toFixed(1)+'%) önceki teste göre</div>';
       }
-      rows+='<div class="m"><div class="l">'+M[k][0]+'<br><span class="dim">'+trDate(last.d)+'</span></div><div class="v"><span class="num">'+fmt(k,last.v)+'</span><small>'+M[k][1]+'</small></div>'+sparkline(s,k)+dh+(typeof metricChart==='function'?metricChart(a,k,s):'')+'</div>';
+      rows+='<div class="m"><div class="l">'+M[k][0]+'<br><span class="dim">'+trDate(last.d)+'</span></div><div class="v"><span class="num">'+fmt(k,last.v)+'</span><small>'+M[k][1]+'</small></div>'+sparkline(s,k)+dh+'</div>';
     });
     if(rows) h+='<div class="grp"><h2>'+g.n+'</h2>'+rows+'</div>';
   });
@@ -2786,8 +2786,7 @@ function matchBlock(a,rep){
   }).join('');
   var tb='<table'+(rep?'':' class="tb" style="min-width:560px"')+'><thead><tr><th>Tarih</th><th>Maç</th><th>Durum</th><th>Dk</th><th>Gol</th><th>Asist</th></tr></thead><tbody>'+rows+'</tbody></table>';
   if(rep)return '<h2>Maç istatistikleri</h2>'+sum+'<div style="height:8px"></div>'+tb+'<div class="m">Kaynak: TFF maç sayfaları. Dakikalar ilk 11 ve oyuncu değişikliklerinden hesaplanır (90 dk üzerinden).</div>';
-  var pl=r.rows.filter(function(x){return x.p});var ch=pl.length?'<h3 class="ct" style="margin-top:16px">Maçlarda oynadığı süre (dk)</h3>'+colChart(pl.map(function(x){return Math.max(0,x.p.o-x.p.i)}),pl.map(function(x){return trDate(x.m.d).slice(0,5)}),'var(--accent)',CC.ink,CC.grid):'';
-  return '<div class="grp"><h2>Maç verileri</h2><div class="tw">'+sum+'</div>'+ch+'<div class="tw" style="margin-top:12px">'+tb+'</div><p class="dim" style="margin:6px 0 0">Kaynak: TFF. Dakikalar ilk 11 ve oyuncu değişikliklerinden hesaplanır (90 dk üzerinden, uzatma dakikası sayılmaz). TFF asist bilgisini yayınlamaz, asistleri sen girersin.</p></div>';
+  return '<div class="grp"><h2>Maç verileri</h2><div class="tw">'+sum+'</div><div class="tw" style="margin-top:12px">'+tb+'</div><p class="dim" style="margin:6px 0 0">Kaynak: TFF. Dakikalar ilk 11 ve oyuncu değişikliklerinden hesaplanır (90 dk üzerinden, uzatma dakikası sayılmaz). TFF asist bilgisini yayınlamaz, asistleri sen girersin.</p></div>';
 }
 var _vpMc=vProfile;
 vProfile=function(){
@@ -2811,46 +2810,6 @@ teamRep=function(){
   var sec='<h2>Maç istatistikleri</h2><table><thead><tr><th>Sporcu</th><th>Maç</th><th>İlk 11</th><th>Dakika</th><th>Gol</th><th>Asist</th><th>Sarı</th></tr></thead><tbody>'+rs.map(function(r){return '<tr><td>'+esc(r.a.n)+'</td>'+mSummaryCells(r.t)+'</tr>'}).join('')+'</tbody></table>';
   var i=h.lastIndexOf('<div class="ft">');
   return i>-1?h.slice(0,i)+sec+h.slice(i):h+sec;
-};
-
-// ---- Sporcu profilinde grafikler (sayıların altında)
-function teamVals(k){return act().map(function(x){return lastV(x.id,k)}).filter(function(v){return v!=null&&isFinite(v)});}
-function posBar(a,k,v){
-  var tv=teamVals(k);if(tv.length<2)return '';
-  var mn=Math.min.apply(null,tv),mx=Math.max.apply(null,tv),mean=tv.reduce(function(x,y){return x+y},0)/tv.length;
-  if(mx===mn)return '';
-  var W=340,L=14,R=326,X=function(x){return L+(x-mn)/(mx-mn)*(R-L)},dec=M[k][3],pc=pct(a.id,k);
-  var s='<svg viewBox="0 0 '+W+' 62" width="100%" role="img" aria-label="'+esc(M[k][0])+' takım içindeki yeri" style="display:block">'+
-   '<line x1="'+L+'" x2="'+R+'" y1="30" y2="30" style="stroke:var(--line);stroke-width:6;stroke-linecap:round"/>'+
-   '<line x1="'+X(mean).toFixed(1)+'" x2="'+X(mean).toFixed(1)+'" y1="21" y2="39" style="stroke:var(--muted);stroke-width:2"><title>Takım ortalaması '+mean.toFixed(dec)+'</title></line>'+
-   '<circle cx="'+X(v).toFixed(1)+'" cy="30" r="7" style="fill:var(--accent);stroke:var(--surface);stroke-width:2"><title>'+v.toFixed(dec)+' '+esc(M[k][1])+'</title></circle>'+
-   '<text x="'+L+'" y="56" style="font-size:10px;fill:var(--muted)">'+mn.toFixed(dec)+'</text><text x="'+R+'" y="56" text-anchor="end" style="font-size:10px;fill:var(--muted)">'+mx.toFixed(dec)+'</text>'+
-   '<text x="'+Math.min(Math.max(X(mean),50),W-50).toFixed(1)+'" y="56" text-anchor="middle" style="font-size:10px;fill:var(--muted)">ort. '+mean.toFixed(dec)+'</text>'+
-   '<text x="'+Math.min(Math.max(X(v),20),W-20).toFixed(1)+'" y="14" text-anchor="middle" style="font-size:11px;font-weight:600;fill:var(--ink)">'+v.toFixed(dec)+'</text></svg>';
-  var note=(pc==null?'':'Takımda P'+Math.round(pc)+'. ')+'Soldaki en düşük, sağdaki en yüksek takım değeri.'+(M[k][2]==='low'?' Bu testte düşük değer daha iyidir.':'');
-  return s+'<p class="dim" style="margin:0">'+note+'</p>';
-}
-function metricChart(a,k,s){
-  if(!s||!s.length)return '';
-  var inner;
-  if(s.length>=2){
-    var tv=teamVals(k),mean=tv.length>1?tv.reduce(function(x,y){return x+y},0)/tv.length:null;
-    inner=lc({series:[{color:'var(--accent)',pts:s.map(function(p){return [dnum(p.d),p.v]}),dots:true}],hline:mean,dec:M[k][3],h:120,xl:[trDate(s[0].d),trDate(s[s.length-1].d)],label:M[k][0]+' gelişimi'})+
-      '<p class="dim" style="margin:0">'+(mean!=null?'Kesikli çizgi: takım ortalaması. ':'')+s.length+' test.'+(M[k][2]==='low'?' Bu testte düşük değer daha iyidir.':'')+'</p>';
-  }else inner=posBar(a,k,s[0].v);
-  return inner?'<div style="grid-column:1/-1;margin-top:2px">'+inner+'</div>':'';
-}
-function profRadar(a){
-  var any=RAX.some(function(k){return pct(a.id,k)!=null});if(!any)return '';
-  return '<div class="grp"><h2>Takım içi profil</h2>'+radar([a.id],['var(--accent)'],CC.ink,CC.grid)+'<p class="dim" style="margin:0">Her eksen sporcunun takım içindeki yüzdeliğini gösterir. Dış çember en iyi, merkez en düşük. Test yapılmayan eksenler boş kalır.</p></div>';
-}
-var _vpGr=vProfile;
-vProfile=function(){
-  var h=_vpGr(),a=ath(selA);
-  if(view!=='profile'||!a||ROLE!=='coach')return h;
-  var rd=profRadar(a);if(!rd)return h;
-  var K='<div class="grp"><h2>Maç verileri</h2>',i=h.indexOf(K);if(i<0){K='<div class="grp"><h2>Kayıtlar</h2>';i=h.indexOf(K);}
-  return i>-1?h.slice(0,i)+rd+h.slice(i):h+rd;
 };
 
 // ---- Uygulama olarak yükleme (PWA)
