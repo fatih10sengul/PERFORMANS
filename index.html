@@ -1827,7 +1827,7 @@ function authBox(inner){
   var el=document.getElementById('auth');
   if(!el){el=document.createElement('div');el.id='auth';document.body.appendChild(el);}
   el.style.display='flex';
-  el.innerHTML='<div class="authc"><h1>Performans Paneli</h1>'+inner+'</div>';
+  el.innerHTML='<div class="authc"><h1>Performans Paneli</h1>'+inner+(isStandalone()?'':'<p class="dim" style="margin:22px 0 0"><button class="back" style="margin:0;padding:0" onclick="installApp()">Telefona uygulama olarak kur</button></p>')+'</div>';
 }
 function authHide(){var el=document.getElementById('auth');if(el)el.style.display='none';}
 var authMode='in';
@@ -1931,7 +1931,7 @@ function chrome(){
   var nv=document.querySelector('nav');if(nv)nv.style.display=ROLE==='athlete'?'none':'flex';
   var bar=document.getElementById('topbar');
   if(!bar){bar=document.createElement('div');bar.id='topbar';document.body.appendChild(bar);}
-  bar.innerHTML='<span id="sync-st" class="ok">Kaydedildi</span><button onclick="doSignOut()">Çıkış</button>';
+  bar.innerHTML='<span id="sync-st" class="ok">Kaydedildi</span>'+(isStandalone()?'':'<button onclick="installApp()">Yükle</button>')+'<button onclick="doSignOut()">Çıkış</button>';
 }
 async function boot(){
   authBox('<p class="sub">Yükleniyor...</p>');
@@ -1967,7 +1967,7 @@ async function boot(){
 }
 (function(){
   var st=document.createElement('style');
-  st.textContent='#auth{position:fixed;inset:0;z-index:50;background:var(--bg);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:max(40px,env(safe-area-inset-top)) 18px 40px}.authc{width:100%;max-width:420px}.au-msg{min-height:20px;margin-top:10px;font-size:15px}.au-msg.bad{color:var(--bad)}.au-msg.ok{color:var(--good)}#topbar{position:fixed;top:max(6px,env(safe-area-inset-top));right:10px;z-index:8;display:flex;gap:8px;align-items:center;font-size:12px}#topbar button{background:var(--surface);color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:12px;min-height:0}#sync-st{color:var(--muted)}#sync-st.ok{color:var(--good)}#sync-st.busy{color:var(--warn)}#sync-st.bad{color:var(--bad)}#app{padding-top:34px}';
+  st.textContent='#auth{position:fixed;inset:0;z-index:50;background:var(--bg);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:max(40px,env(safe-area-inset-top)) 18px 40px}.authc{width:100%;max-width:420px}.au-msg{min-height:20px;margin-top:10px;font-size:15px}.au-msg.bad{color:var(--bad)}.au-msg.ok{color:var(--good)}#topbar{position:fixed;top:max(6px,env(safe-area-inset-top));right:10px;z-index:8;display:flex;gap:8px;align-items:center;font-size:12px}#topbar button{background:var(--surface);color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:12px;min-height:0}#sync-st{color:var(--muted)}#sync-st.ok{color:var(--good)}#sync-st.busy{color:var(--warn)}#sync-st.bad{color:var(--bad)}#app{padding-top:34px}#inst{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.62);display:none;align-items:center;justify-content:center;padding:20px}.instc{background:var(--surface);border:1.5px solid var(--ink);border-radius:12px;padding:20px;max-width:380px;width:100%}.instc ol{padding-left:20px;margin:12px 0 16px;line-height:1.6}';
   document.head.appendChild(st);
   if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
 })();
@@ -2070,6 +2070,24 @@ vAthletes=function(){
   var K='<div class="row"><button class="btn ghost" onclick="go(\'entry\')">';
   return h.indexOf(K)>-1?h.replace(K,row+K):h.replace('</p>','</p>'+row);
 };
+
+
+// ---- Uygulama olarak yükleme (PWA)
+var DEFERRED=null;
+function isStandalone(){return (window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true;}
+function isIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);}
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();DEFERRED=e;});
+window.addEventListener('appinstalled',function(){DEFERRED=null;toast('Uygulama yüklendi');});
+async function installApp(){
+  if(DEFERRED){DEFERRED.prompt();try{await DEFERRED.userChoice;}catch(e){}DEFERRED=null;return;}
+  var el=document.getElementById('inst');
+  if(!el){el=document.createElement('div');el.id='inst';document.body.appendChild(el);}
+  var steps=isIOS()
+    ?'<li>Bu sayfayı Safari\'de aç (başka tarayıcıda olmaz).</li><li>Altta Paylaş simgesine (kare ve yukarı ok) dokun.</li><li>"Ana Ekrana Ekle"yi seç, sonra Ekle de.</li>'
+    :'<li>Tarayıcı menüsünü aç (sağ üstte üç nokta).</li><li>"Uygulamayı yükle" ya da "Ana ekrana ekle"yi seç.</li><li>Yükle de.</li>';
+  el.innerHTML='<div class="instc"><b>Uygulama olarak kur</b><ol>'+steps+'</ol><p class="dim" style="margin:0 0 14px">Kurduktan sonra ana ekrandaki simgeden açılır, tarayıcı çubuğu görünmez.</p><button class="btn" onclick="document.getElementById(\'inst\').style.display=\'none\'">Tamam</button></div>';
+  el.style.display='flex';
+}
 
 boot();
 
