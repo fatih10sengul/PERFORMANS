@@ -2321,7 +2321,7 @@ function txPrep(){
       var v={},sv={};
       txMap.forEach(function(f,i){if(!f)return;
         if(SVK[f]){var y=svNum(r[i]);if(y==null)return;if(y<SVK[f][2]||y>SVK[f][3]){badv++;return;}sv[f.slice(3)]=y;return;}
-        var x=txNum(r[i]);if(x==null)return;if(f==='boy'&&x<3)x=Math.round(x*1000)/10;v[f]=x;});
+        var x=txNum(r[i]);if(x==null)return;if(f==='boy'&&x<3)x=Math.round(x*1000)/10;if(v[f]!=null&&M[f]&&M[f][2]!=='none')x=M[f][2]==='low'?Math.min(v[f],x):Math.max(v[f],x);v[f]=x;});
       var n=Object.keys(v).length+Object.keys(sv).length;
       if(n&&!d){bad++;return;}
       recs.push({nm:nm,d:d,v:v,sv:sv,pr:pr,bi:bi});
