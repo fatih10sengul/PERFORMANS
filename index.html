@@ -2127,12 +2127,15 @@ function txBirth(v){
 var TPL={s10:'10 m sprint (s)',s20:'20 m sprint (s)',s30:'30 m sprint (s)',cmjH:'CMJ yükseklik (cm)',cmjT:'CMJ süre (ms)',sjH:'SJ yükseklik (cm)',djD:'DJ düşüş yüksekliği (cm)',djH:'DJ sıçrama yüksekliği (cm)',djGct:'DJ yer temas (ms)',boy:'Boy (cm)',kilo:'Kilo (kg)',agR:'5-0-5 sağ (s)',agL:'5-0-5 sol (s)',slR:'Tek bacak hop sağ (cm)',slL:'Tek bacak hop sol (cm)',hopH:'Hop yükseklik (cm)',hopGct:'Hop yer temas (ms)',vmax:'Maks hız (km/sa)',ift:'30-15 IFT (km/sa)'};
 var TALT={s10:['10m','s10','sprint10','10msprint'],s20:['20m','s20','sprint20'],s30:['30m','s30','sprint30'],cmjH:['cmj','cmjh','cmjyukseklik','cmjsicrama','cmjsicramayuksekligi'],cmjT:['cmjt','cmjsure','cmjkalkis'],sjH:['sj','sjh','sjyukseklik','sjsicrama'],djD:['djdusus','djdrop','djd','djdropyuksekligi'],djH:['dj','djh','djyukseklik','djsicrama'],djGct:['djgct','djtemas','djyertemas','djyertemassuresi'],agR:['505sag','505r','ag505sag','505sagbacak'],agL:['505sol','505l','ag505sol','505solbacak'],slR:['tekbacaksag','slsag','slr','singlelegsag','tekbacakhopsag'],slL:['tekbacaksol','slsol','sll','singlelegsol','tekbacakhopsol'],hopH:['hop','hopyukseklik','hopyuksekligi','hopsicrama'],hopGct:['hopgct','hoptemas','hopyertemas'],boy:['boycm','height','boyu'],kilo:['kilokg','kg','agirlik','vucutagirligi','weight','vucutagirligikg'],vmax:['vmax','maxhiz','maxspeed','maksimumhiz','maksimumsprinthizi','maxsprinthizi','maksimumhiz'],ift:['ift','vift','3015','3015ift']};
 function trAscii(t){return String(t==null?'':t).replace(/\([^)]*\)/g,' ').toLocaleLowerCase('tr').replace(/ı/g,'i').replace(/ç/g,'c').replace(/ğ/g,'g').replace(/ö/g,'o').replace(/ş/g,'s').replace(/ü/g,'u').replace(/[^a-z0-9]/g,'');}
-function txFieldKeys(){var o=[];T.forEach(function(g){g.f.forEach(function(f){o.push(f[0]);});});return o;}
-function txFieldLabel(k){var r=k;T.forEach(function(g){g.f.forEach(function(f){if(f[0]===k)r=g.n+' · '+f[1]+' ('+f[2]+')';});});return r;}
+var SVK={sv_rpe:['RPE (0-10)','Anket · RPE (0-10)',0,10,['rpe','borg','algilananzorluk','rpe010','seansrpe']],sv_dur:['Antrenman süresi (dk)','Anket · Antrenman süresi (dk)',1,600,['sure','antrenmansuresi','dk','dakika','suredk','seanssuresi']],sv_sleep:['Uyku (saat)','Anket · Uyku (saat)',0,24,['uyku','uykusaat','uykusuresi','uykusaati']],sv_fat:['Yorgunluk (1-5)','Anket · Yorgunluk (1-5)',1,5,['yorgunluk','fatigue','yorgunluk15']],sv_sore:['Kas ağrısı (1-5)','Anket · Kas ağrısı (1-5)',1,5,['kasagrisi','sore','doms','kasagrisi15','agri']]};
+function txFieldKeys(){var o=[];T.forEach(function(g){g.f.forEach(function(f){o.push(f[0]);});});return o.concat(Object.keys(SVK));}
+function svNum(v){if(typeof v==='number')return isFinite(v)?v:null;var t=String(v==null?'':v).trim().replace(',','.');if(!t)return null;var n=parseFloat(t);return isFinite(n)?n:null;}
+function txFieldLabel(k){if(SVK[k])return SVK[k][1];var r=k;T.forEach(function(g){g.f.forEach(function(f){if(f[0]===k)r=g.n+' · '+f[1]+' ('+f[2]+')';});});return r;}
 function txGuessField(h){
   var x=trAscii(h);if(!x)return '';
   var ks=txFieldKeys();
-  for(var i=0;i<ks.length;i++){var k=ks[i];if(trAscii(TPL[k]||'')===x||trAscii(k)===x||(TALT[k]||[]).map(trAscii).indexOf(x)>-1)return k;}
+  for(var i=0;i<ks.length;i++){var k=ks[i];if(SVK[k]){if(trAscii(SVK[k][0])===x||SVK[k][4].indexOf(x)>-1)return k;continue;}
+    if(trAscii(TPL[k]||'')===x||trAscii(k)===x||(TALT[k]||[]).map(trAscii).indexOf(x)>-1)return k;}
   return '';
 }
 function txGuess(hd){
@@ -2166,15 +2169,17 @@ function txNum(v){
 function txPrep(){
   if(!txRows||!txMap)return null;
   var idx={};db.athletes.forEach(function(a){idx[trKey(a.n)]=a;});
-  var out=[],unk={},bad=0,vals=0,newA={},upA={},defDate=document.getElementById('tx-d')?document.getElementById('tx-d').value:'';
+  var out=[],unk={},bad=0,badv=0,vals=0,newA={},upA={},defDate=document.getElementById('tx-d')?document.getElementById('tx-d').value:'';
   txRows.slice(1).forEach(function(r){
     var nm=txNm>=0?String(r[txNm]==null?'':r[txNm]).trim():'';
     if(txSn>=0&&r[txSn])nm=(nm+' '+String(r[txSn]).trim()).trim();
     nm=nm.replace(/\s+/g,' ');if(!nm)return;
     var k=trKey(nm),pr=txPs>=0?String(r[txPs]==null?'':r[txPs]).trim():'',pos=pr?normPos(pr):'',bi=txBd>=0?txBirth(r[txBd]):null;
     var dr=txDt>=0?r[txDt]:'',d=(dr==null||String(dr).trim()==='')?(defDate||today()):txDate(dr);
-    var v={},n=0;
-    txMap.forEach(function(f,i){if(!f)return;var x=txNum(r[i]);if(x==null)return;if(f==='boy'&&x<3)x=Math.round(x*1000)/10;v[f]=x;n++;});
+    var v={},sv={},n=0;
+    txMap.forEach(function(f,i){if(!f)return;
+      if(SVK[f]){var y=svNum(r[i]);if(y==null)return;if(y<SVK[f][2]||y>SVK[f][3]){badv++;return;}sv[f.slice(3)]=y;n++;return;}
+      var x=txNum(r[i]);if(x==null)return;if(f==='boy'&&x<3)x=Math.round(x*1000)/10;v[f]=x;n++;});
     var a=idx[k];
     if(!a){
       if(!txAdd){if(n||pr||bi)unk[nm]=1;return;}
@@ -2188,9 +2193,9 @@ function txPrep(){
     }
     if(!n)return;
     if(!d){bad++;return;}
-    out.push({a:a,k:k,nm:nm,d:d,v:v,n:n});vals+=n;
+    out.push({a:a,k:k,nm:nm,d:d,v:v,sv:sv,n:n});vals+=n;
   });
-  return {rows:out,unk:Object.keys(unk),bad:bad,vals:vals,newA:Object.keys(newA).map(function(k){return newA[k]}),upA:Object.keys(upA).map(function(k){return upA[k]})};
+  return {rows:out,badv:badv,unk:Object.keys(unk),bad:bad,vals:vals,newA:Object.keys(newA).map(function(k){return newA[k]}),upA:Object.keys(upA).map(function(k){return upA[k]})};
 }
 function txToggle(){txOpen=!txOpen;if(!txOpen){txRows=null;txMap=null;}render();}
 async function txRead(inp){
@@ -2219,24 +2224,31 @@ function txDo(){
   P.newA.forEach(function(x){var a={id:uid(),n:x.n,p:x.p,y:x.y||null};if(x.bd)a.bd=x.bd;db.athletes.push(a);});
   db.athletes.forEach(function(a){idx[trKey(a.n)]=a;});
   P.upA.forEach(function(u){if(u.p)u.a.p=u.p;if(u.bi){u.a.y=u.bi.y;if(u.bi.bd)u.a.bd=u.bi.bd;}});
-  var ins=0,upd=0;
+  var ins=0,upd=0,svN=0,svU=0;
   P.rows.forEach(function(x){
     var a=x.a||idx[x.k];if(!a)return;
-    var ex=db.records.filter(function(r){return r.a===a.id&&r.d===x.d})[0];
-    if(ex){ex.v=Object.assign({},ex.v,x.v);upd++;}
-    else{db.records.push({id:uid(),a:a.id,d:x.d,v:x.v});ins++;}
+    if(Object.keys(x.v).length){
+      var ex=db.records.filter(function(r){return r.a===a.id&&r.d===x.d})[0];
+      if(ex){ex.v=Object.assign({},ex.v,x.v);upd++;}
+      else{db.records.push({id:uid(),a:a.id,d:x.d,v:x.v});ins++;}
+    }
+    if(Object.keys(x.sv).length){
+      var es=SV().filter(function(r){return r.a===a.id&&r.d===x.d})[0];
+      if(es){Object.assign(es,x.sv);svU++;}
+      else{SV().push(Object.assign({id:uid(),a:a.id,d:x.d,rpe:null,dur:null,sleep:null,fat:null,sore:null,pain:[],seen:true},x.sv));svN++;}
+    }
   });
   txOpen=false;txRows=null;txMap=null;save();render();
-  toast((P.newA.length?P.newA.length+' yeni sporcu, ':'')+ins+' test kaydı eklendi'+(upd?', '+upd+' kayıt güncellendi':'')+'.');
+  toast((P.newA.length?P.newA.length+' yeni sporcu, ':'')+ins+' test kaydı'+(svN+svU?', '+(svN+svU)+' anket kaydı':'')+' eklendi'+(upd?' ('+upd+' test kaydı güncellendi)':'')+'.');
 }
 function txSample(){
   var ks=txFieldKeys(),n=db.athletes.slice().sort(byname).slice(0,3).map(function(a){return a.n});
   if(!n.length)n=['Ali Yılmaz','Can Demir'];
   var rows=n.map(function(x){return x+';Orta saha;15.03.2007;'+today()+';'+ks.map(function(){return ''}).join(';');});
-  dlFile('sporcu-test-sablonu.csv','Ad Soyad;Pozisyon;Doğum tarihi;Tarih;'+ks.map(function(k){return TPL[k]}).join(';')+'\r\n'+rows.join('\r\n')+'\r\n');
+  dlFile('sporcu-test-sablonu.csv','Ad Soyad;Pozisyon;Doğum tarihi;Tarih;'+ks.map(function(k){return TPL[k]||SVK[k][0]}).join(';')+'\r\n'+rows.join('\r\n')+'\r\n');
 }
 function txPanel(){
-  var h='<div class="form"><b>Excel aktar: sporcu bilgileri ve testler</b><p class="dim" style="margin:6px 0">İlk satır başlık olsun. Her satır bir sporcu: Ad Soyad, Pozisyon, Doğum tarihi, Boy, Kilo, Tarih ve test sütunları (CMJ, sprint vb.). Hepsi isteğe bağlıdır, boş hücreler atlanır. VKİ boy ve kilodan otomatik hesaplanır, dosyadaki VKİ sütununa gerek yok. Sütun sırası önemli değil, tanınmayan sütunu aşağıdan seçersin.</p>'+
+  var h='<div class="form"><b>Excel aktar: sporcu bilgileri ve testler</b><p class="dim" style="margin:6px 0">İlk satır başlık olsun. Her satır bir sporcu: Ad Soyad, Pozisyon, Doğum tarihi, Boy, Kilo, Tarih, test sütunları (CMJ, sprint vb.) ve günlük anket sütunları (RPE, süre, uyku, yorgunluk, kas ağrısı). Hepsi isteğe bağlıdır, boş hücreler atlanır. VKİ boy ve kilodan otomatik hesaplanır, dosyadaki VKİ sütununa gerek yok. Sütun sırası önemli değil, tanınmayan sütunu aşağıdan seçersin.</p>'+
     '<label for="tx-f">Dosya seç (.xlsx, .xls, .csv)</label><input id="tx-f" type="file" accept=".xlsx,.xls,.csv,text/csv" onchange="txRead(this)">'+
     '<div class="row" style="margin-top:8px"><button class="btn small ghost" onclick="txSample()">Boş şablon indir</button></div>';
   if(txRows){
@@ -2255,6 +2267,7 @@ function txPanel(){
     h+='<p style="margin:12px 0 6px">'+(P.newA.length?'<b>'+P.newA.length+'</b> yeni sporcu eklenecek, ':'')+(P.upA.length?'<b>'+P.upA.length+'</b> sporcunun pozisyon/doğum bilgisi güncellenecek, ':'')+'<b>'+P.rows.length+'</b> ölçüm/test satırı, '+P.vals+' değer eklenecek'+(dup?' ('+dup+' satır aynı gün kaydı olan sporcuya ait, değerler o kayda işlenir)':'')+'.</p>';
     if(P.unk.length)h+='<p class="c-warn" style="margin:6px 0">Uygulamada bulunmayan isimler atlandı ('+P.unk.length+'): '+esc(P.unk.slice(0,8).join(', '))+(P.unk.length>8?'…':'')+'. Yukarıdan sporcu ekleme kutusunu işaretle ya da ismi düzelt.</p>';
     var uk=P.newA.filter(function(x){return x.unkPos}).length;if(uk)h+='<p class="c-warn" style="margin:6px 0">'+uk+' sporcunun pozisyonu tanınmadı, "Orta saha" olarak eklenir; profilden düzeltebilirsin.</p>';
+    if(P.badv)h+='<p class="c-warn" style="margin:6px 0">'+P.badv+' anket değeri geçerli aralığın dışında olduğu için atlandı (RPE 0-10, yorgunluk ve kas ağrısı 1-5).</p>';
     if(P.bad)h+='<p class="c-warn" style="margin:6px 0">'+P.bad+' satırın tarihi okunamadı, atlandı.</p>';
     if(!txMap.some(function(k){return k})&&!P.newA.length&&!P.upA.length)h+='<p class="c-warn" style="margin:6px 0">Hiçbir test sütunu eşleşmedi. Yukarıdaki tabloda her sütun için test alanını seç.</p>';
     h+='<div class="tw"><table class="tb" style="min-width:300px"><thead><tr><th>Sporcu</th><th>Tarih</th><th>Değer</th><th>VKİ</th></tr></thead><tbody>'+P.rows.slice(0,40).map(function(x){return '<tr><td>'+esc(x.a?x.a.n:x.nm)+(x.a?'':' <span class="c-ok">(yeni)</span>')+'</td><td>'+trDate(x.d)+'</td><td>'+x.n+'</td><td>'+(x.v.boy&&x.v.kilo?(x.v.kilo/Math.pow(x.v.boy/100,2)).toFixed(1):'-')+'</td></tr>'}).join('')+(P.rows.length>40?'<tr><td colspan="4" class="dim">… ve '+(P.rows.length-40)+' satır daha</td></tr>':'')+'</tbody></table></div>';
