@@ -1014,7 +1014,7 @@ function vPrev(){
     body=dayTabs(prevDay,'setPV')+(dd&&dd.title?'<p class="dim" style="margin:0 0 6px">'+esc(dd.title)+'</p>':'')+(ex.length?ex.map(function(e){return '<div class="rank"><div class="top"><label class="chk" style="margin:0"><input type="checkbox" '+(DN()[a.id+'|'+dt+'|'+e.id]?'checked':'')+' onchange="toggleDone(\''+a.id+'\',\''+dt+'\',\''+e.id+'\')"><span>'+esc(e.n)+'</span></label>'+vidLink(e)+'</div><div class="dim" style="margin-left:32px">'+esc(e.sets||'-')+(e.reps?' x '+esc(e.reps):'')+(e.note?', '+esc(e.note):'')+'</div></div>'}).join('')+'<p class="dim" style="margin:8px 0 0">'+dn+' / '+ex.length+' tamamlandı</p>':'<p class="dim">'+DF[prevDay]+' için program yok.</p>');
     h+=sec('Programım ('+DF[prevDay]+')',body);}
   if(p.survey){any=true;h+=sec('Günlük anket',surveyForm(a));}
-  if(p.tests){any=true;var rows='';T.forEach(function(g){g.m.forEach(function(k){var sr=series(a.id,k);if(!sr.length)return;var l=sr[sr.length-1];rows+='<div class="m" style="grid-template-columns:1fr auto"><div class="l">'+M[k][0]+'<br><span class="dim">'+trDate(l.d)+'</span></div><div class="v"><span class="num" style="font-size:26px">'+fmt(k,l.v)+'</span><small>'+M[k][1]+'</small></div></div>'});});h+=sec('Testlerim',rows||'<p class="dim">Henüz test sonucu yok.</p>');}
+  if(p.tests){any=true;var rows='';T.forEach(function(g){g.m.forEach(function(k){if(typeof hideK==='function'&&hideK(k))return;var sr=series(a.id,k);if(!sr.length)return;var l=sr[sr.length-1];rows+='<div class="m" style="grid-template-columns:1fr auto"><div class="l">'+M[k][0]+'<br><span class="dim">'+trDate(l.d)+'</span></div><div class="v"><span class="num" style="font-size:26px">'+fmt(k,l.v)+'</span><small>'+M[k][1]+'</small></div></div>'});});h+=sec('Testlerim',rows||'<p class="dim">Henüz test sonucu yok.</p>');}
   if(p.gps){any=true;var lg2=db.gps.filter(function(g){return g.a===a.id}).sort(function(x,y){return x.d<y.d?1:-1}),l7=lg2.filter(function(g){return dnum(g.d)>dnum(today())-7&&g.td!=null}).reduce(function(x,g){return x+g.td},0);
     h+=sec('GPS özetim',lg2.length?'<p style="margin:6px 0">Son 7 günde Total Distance: <b>'+n0(l7)+' m</b></p>'+gtab(lg2.slice(0,3)):'<p class="dim">Henüz GPS verisi yok.</p>');}
   if(p.load){any=true;var e1=ewma(a.id,'td');h+=sec('Yük ve risk',e1&&e1.r!=null?'<div class="m" style="grid-template-columns:1fr auto"><div class="l">ACWR (Total Distance)<br><span class="chip '+band(e1)[1]+'">'+band(e1)[0]+'</span></div><div class="v"><span class="num">'+e1.r.toFixed(2)+'</span></div></div>':'<p class="dim">Henüz yük verisi yok.</p>');}
@@ -1667,7 +1667,7 @@ var COLS=[
       var o=[];Object.keys(DN()).forEach(function(k){if(!DN()[k])return;var p=k.split('|');if(p.length!==3||!ex[p[2]])return;o.push({id:k,row:{athlete_id:p[0],d:p[1],exercise_id:p[2]}});});return o;},
     del:function(q,id){var p=id.split('|');return q.eq('athlete_id',p[0]).eq('d',p[1]).eq('exercise_id',p[2]);}},
   {name:'perm',table:'permissions',conflict:'athlete_id',
-    list:function(){var o=[];Object.keys(PM()).forEach(function(aid){if(!ath(aid))return;var r={athlete_id:aid};PK.forEach(function(k){r[k]=!!PM()[aid][k]});o.push({id:aid,row:r});});return o;},
+    list:function(){var o=[],ids=HT_ON?db.athletes.map(function(a){return a.id}):Object.keys(PM());ids.forEach(function(aid){if(!ath(aid))return;var pa=Object.assign({},PDEF,PM()[aid]||{}),r={athlete_id:aid};PK.forEach(function(k){r[k]=!!pa[k]});if(HT_ON)r.hidden_tests=(db.hideT||[]).slice().sort();o.push({id:aid,row:r});});return o;},
     del:function(q,id){return q.eq('athlete_id',id);}},
   {name:'settings',table:'settings',conflict:'key',
     list:function(){return SETK.filter(function(k){return db[k]!==undefined&&db[k]!==null}).map(function(k){return {id:k,row:{key:k,value:db[k]}}});},
@@ -1774,7 +1774,8 @@ function mapProg(days,ex){
   return pr;
 }
 function mapDone(rows){var d={};(rows||[]).forEach(function(r){d[r.athlete_id+'|'+r.d+'|'+r.exercise_id]=true});return d;}
-function mapPerm(rows){var pm={};(rows||[]).forEach(function(r){var o={};PK.forEach(function(k){o[k]=!!r[k]});pm[r.athlete_id]=o});return pm;}
+var HT_ON=false;
+function mapPerm(rows){var pm={},hs={};(rows||[]).forEach(function(r){var o={};PK.forEach(function(k){o[k]=!!r[k]});pm[r.athlete_id]=o;if(Array.isArray(r.hidden_tests)){HT_ON=true;r.hidden_tests.forEach(function(k){hs[k]=1})}});db.hideT=Object.keys(hs);return pm;}
 function applyRows(T){
   db.athletes=(T.athletes||[]).map(function(r){var a={id:r.id,n:r.name,p:r.position||'Orta saha',y:r.birth_year,invite:r.invite_code,uid:r.user_id};if(r.birth_date)a.bd=String(r.birth_date).slice(0,10);if(r.photo_path)a.ph=r.photo_path;return a;});
   (T.injuries||[]).forEach(function(r){var a=ath(r.athlete_id);if(a)a.inj=r.data;});
@@ -2810,6 +2811,31 @@ teamRep=function(){
   var sec='<h2>Maç istatistikleri</h2><table><thead><tr><th>Sporcu</th><th>Maç</th><th>İlk 11</th><th>Dakika</th><th>Gol</th><th>Asist</th><th>Sarı</th></tr></thead><tbody>'+rs.map(function(r){return '<tr><td>'+esc(r.a.n)+'</td>'+mSummaryCells(r.t)+'</tr>'}).join('')+'</tbody></table>';
   var i=h.lastIndexOf('<div class="ft">');
   return i>-1?h.slice(0,i)+sec+h.slice(i):h+sec;
+};
+
+// ---- Sporcuya gösterilmeyecek testler (herkes için aynı)
+function hideK(k){return (db.hideT||[]).indexOf(k)>-1;}
+var htOpen=false;
+function htToggle(el){htOpen=!!(el&&el.open);}
+function setHide(k,off){
+  var l=(db.hideT||[]).filter(function(x){return x!==k});
+  if(off)l.push(k);
+  db.hideT=l;HT_ON=true;save();render();
+}
+function hideBlock(){
+  var n=(db.hideT||[]).length;
+  var h='<details'+(htOpen?' open':'')+' ontoggle="htToggle(this)" style="margin:12px 0"><summary>Sporcuya gösterilmeyecek testler'+(n?' ('+n+' gizli)':'')+'</summary><div class="form"><p class="dim" style="margin:0 0 8px">İşaretlediğin testler tüm sporcuların kendi ekranında görünmez. Senin ekranında ve raporlarda görünmeye devam eder. Kullanmadan önce Supabase'de supabase-gizli-test.sql dosyasını bir kez çalıştırmış olmalısın.</p>';
+  T.forEach(function(g){
+    var ks=g.m.filter(function(k){return M[k]});if(!ks.length)return;
+    h+='<b style="display:block;margin:10px 0 2px">'+esc(g.n)+'</b>'+ks.map(function(k){return '<label class="chk"><input type="checkbox" '+(hideK(k)?'checked':'')+' onchange="setHide(\''+k+'\',this.checked)">'+esc(M[k][0])+'</label>'}).join('');
+  });
+  return h+'</div></details>';
+}
+var _vpvH=vPrev;
+vPrev=function(){
+  var h=_vpvH();if(ROLE!=='coach')return h;
+  var K='<div class="alert" style="border-color:var(--accent)">';
+  return h.indexOf(K)>-1?h.replace(K,hideBlock()+K):h;
 };
 
 // ---- Uygulama olarak yükleme (PWA)
