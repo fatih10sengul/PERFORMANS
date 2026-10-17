@@ -2824,7 +2824,7 @@ function setHide(k,off){
 }
 function hideBlock(){
   var n=(db.hideT||[]).length;
-  var h='<details'+(htOpen?' open':'')+' ontoggle="htToggle(this)" style="margin:12px 0"><summary>Sporcuya gösterilmeyecek testler'+(n?' ('+n+' gizli)':'')+'</summary><div class="form"><p class="dim" style="margin:0 0 8px">İşaretlediğin testler tüm sporcuların kendi ekranında görünmez. Senin ekranında ve raporlarda görünmeye devam eder. Kullanmadan önce Supabase'de supabase-gizli-test.sql dosyasını bir kez çalıştırmış olmalısın.</p>';
+  var h='<details'+(htOpen?' open':'')+' ontoggle="htToggle(this)" style="margin:12px 0"><summary>Sporcuya gösterilmeyecek testler'+(n?' ('+n+' gizli)':'')+'</summary><div class="form"><p class="dim" style="margin:0 0 8px">İşaretlediğin testler tüm sporcuların kendi ekranında görünmez. Senin ekranında ve raporlarda görünmeye devam eder. Kullanmadan önce Supabase içinde supabase-gizli-test.sql dosyasını bir kez çalıştırmış olmalısın.</p>';
   T.forEach(function(g){
     var ks=g.m.filter(function(k){return M[k]});if(!ks.length)return;
     h+='<b style="display:block;margin:10px 0 2px">'+esc(g.n)+'</b>'+ks.map(function(k){return '<label class="chk"><input type="checkbox" '+(hideK(k)?'checked':'')+' onchange="setHide(\''+k+'\',this.checked)">'+esc(M[k][0])+'</label>'}).join('');
