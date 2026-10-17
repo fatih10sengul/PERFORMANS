@@ -2167,7 +2167,7 @@ function txNum(v){
   var n=parseFloat(t);return isFinite(n)&&n>0?n:null;
 }
 // ---- Hazır dosya düzenlerini tanıma
-var txFiles=[],txAmb={},txAmbKeys=[];
+var txFiles=[],txAmb={},txAmbKeys=[],txOver=false;
 var TRMON={oca:1,sub:2,mar:3,nis:4,may:5,haz:6,tem:7,agu:8,eyl:9,eki:10,kas:11,ara:12};
 M.mas=['MAS','km/sa','high',1];M.asr=['ASR (MSS − MAS)','km/sa','none',1];
 M.agCtR=['5-0-5 sağ temas','ms','low',0];M.agCtL=['5-0-5 sol temas','ms','low',0];
@@ -2365,9 +2365,15 @@ function txPrep(){
     Object.assign(x.v,r.v);Object.assign(x.sv,r.sv);
   });
   var out=order.map(function(k){var x=rowsM[k];x.n=Object.keys(x.v).length+Object.keys(x.sv).length;vals+=x.n;return x;});
-  return {rows:out,badv:badv,unk:Object.keys(unk),bad:bad,vals:vals,amb:amb,newA:Object.keys(newM).map(function(k){return newM[k]}),upA:Object.keys(upA).map(function(k){return upA[k]})};
+  var conf=0;
+  out.forEach(function(x){if(!x.a)return;
+    var ex=db.records.filter(function(r){return r.a===x.a.id&&r.d===x.d})[0];
+    if(ex)Object.keys(x.v).forEach(function(k){if(ex.v[k]!=null&&Math.abs(ex.v[k]-x.v[k])>1e-9)conf++;});
+    var es=SV().filter(function(r){return r.a===x.a.id&&r.d===x.d})[0];
+    if(es)Object.keys(x.sv).forEach(function(k){if(es[k]!=null&&Math.abs(es[k]-x.sv[k])>1e-9)conf++;});});
+  return {conf:conf,rows:out,badv:badv,unk:Object.keys(unk),bad:bad,vals:vals,amb:amb,newA:Object.keys(newM).map(function(k){return newM[k]}),upA:Object.keys(upA).map(function(k){return upA[k]})};
 }
-function txReset(){txFiles=[];txAmb={};txRows=null;txMap=null;}
+function txReset(){txFiles=[];txAmb={};txRows=null;txMap=null;txOver=false;}
 function txToggle(){txOpen=!txOpen;if(!txOpen)txReset();render();}
 async function txReadOne(f){
   var nm=f.name.toLowerCase(),rows;
@@ -2406,22 +2412,22 @@ function txDo(){
   var ids={};
   P.newA.forEach(function(x){var a={id:uid(),n:x.n,p:x.p,y:x.y||null};if(x.bd)a.bd=x.bd;db.athletes.push(a);ids[x.nk]=a;});
   P.upA.forEach(function(u){if(u.p)u.a.p=u.p;if(u.bi){u.a.y=u.bi.y;if(u.bi.bd)u.a.bd=u.bi.bd;}});
-  var ins=0,upd=0,svN=0,svU=0;
+  var ins=0,upd=0,svN=0,svU=0,kept=0;
   P.rows.forEach(function(x){
     var a=x.a||ids[x.nk];if(!a)return;
     if(Object.keys(x.v).length){
       var ex=db.records.filter(function(r){return r.a===a.id&&r.d===x.d})[0];
-      if(ex){ex.v=Object.assign({},ex.v,x.v);upd++;}
+      if(ex){Object.keys(x.v).forEach(function(k){if(ex.v[k]==null||txOver||Math.abs(ex.v[k]-x.v[k])<=1e-9)ex.v[k]=x.v[k];else kept++;});upd++;}
       else{db.records.push({id:uid(),a:a.id,d:x.d,v:x.v});ins++;}
     }
     if(Object.keys(x.sv).length){
       var es=SV().filter(function(r){return r.a===a.id&&r.d===x.d})[0];
-      if(es){Object.assign(es,x.sv);svU++;}
+      if(es){Object.keys(x.sv).forEach(function(k){if(es[k]==null||txOver||Math.abs(es[k]-x.sv[k])<=1e-9)es[k]=x.sv[k];else kept++;});svU++;}
       else{SV().push(Object.assign({id:uid(),a:a.id,d:x.d,rpe:null,dur:null,sleep:null,fat:null,sore:null,pain:[],seen:true},x.sv));svN++;}
     }
   });
   txOpen=false;txReset();save();render();
-  toast((P.newA.length?P.newA.length+' yeni sporcu, ':'')+ins+' test kaydı'+(svN+svU?', '+(svN+svU)+' anket kaydı':'')+' eklendi'+(upd?' ('+upd+' test kaydı güncellendi)':'')+'.');
+  toast((P.newA.length?P.newA.length+' yeni sporcu, ':'')+ins+' test kaydı'+(svN+svU?', '+(svN+svU)+' anket kaydı':'')+' eklendi'+(upd?' ('+upd+' kayıt aynı güne eklendi)':'')+(kept?'; '+kept+' mevcut değer korundu':'')+'.');
 }
 function txSample(){
   var ks=txFieldKeys(),n=db.athletes.slice().sort(byname).slice(0,3).map(function(a){return a.n});
@@ -2454,6 +2460,7 @@ function txPanel(){
   var P=txPrep(),dup=0;
   txAmbKeys=P.amb.map(function(a){return a.k});
   P.rows.forEach(function(x){if(x.a&&db.records.some(function(r){return r.a===x.a.id&&r.d===x.d}))dup++;});
+  if(P.conf)h+='<p class="c-warn" style="margin:10px 0 4px">'+P.conf+' değer, aynı sporcu ve aynı tarihte zaten farklı bir değerle kayıtlı. Varsayılan olarak mevcut değerler korunur.</p><label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox"'+(txOver?' checked':'')+' onchange="txOver=this.checked;render()" style="width:auto"> Bu değerlerin üzerine yaz</label>';
   if(P.amb.length){
     h+='<p class="c-warn" style="margin:12px 0 4px"><b>'+P.amb.length+' ismin hangi sporcu olduğu belirsiz.</b> Seç ya da atla:</p>'+P.amb.map(function(a,i){
       return '<div class="row" style="margin:4px 0"><span style="min-width:110px"><b>'+esc(a.nm.trim())+'</b></span><select aria-label="'+esc(a.nm)+' kim" onchange="txAmbSet('+i+',this.value)"><option value="">Seç…</option>'+a.c.map(function(c){return '<option value="'+esc(cid(c))+'"'+(txAmb[a.k]===cid(c)?' selected':'')+'>'+esc(c.a?c.a.n:c.name)+'</option>'}).join('')+'<option value="skip"'+(txAmb[a.k]==='skip'?' selected':'')+'>Atla</option></select></div>';}).join('');
@@ -2477,7 +2484,7 @@ var _vaX2=vAthletes;
 vAthletes=function(){
   var h=_vaX2();if(ROLE!=='coach')return h;
   var K='<div class="row"><button class="btn ghost" onclick="go(\'entry\')">';
-  var b='<div class="row" style="margin-bottom:8px"><button class="btn ghost" onclick="txToggle()">'+(txOpen?'Excel aktarımını kapat':'Excel aktar')+'</button>'+(db.athletes.length?'<button class="btn ghost" onclick="posToggle()">'+(posOpen?'Pozisyonları kapat':'Pozisyonları düzenle')+'</button>':'')+'</div>'+(txOpen?txPanel():'')+(posOpen&&db.athletes.length?posPanel():'');
+  var b='<div class="row" style="margin-bottom:8px"><button class="btn ghost" onclick="txToggle()">'+(txOpen?'Excel aktarımını kapat':'Excel aktar')+'</button>'+(db.athletes.length?'<button class="btn ghost" onclick="posToggle()">'+(posOpen?'Pozisyonları kapat':'Pozisyonları düzenle')+'</button><button class="btn ghost" onclick="go(\'hiit\')">HIIT hesaplama</button><button class="btn ghost" onclick="testsCsv()">Testleri indir (CSV)</button><button class="btn ghost" onclick="backupJson()">Yedek indir</button>':'')+'</div>'+(txOpen?txPanel():'')+(posOpen&&db.athletes.length?posPanel():'');
   return h.indexOf(K)>-1?h.replace(K,b+K):h.replace('</p>','</p>'+b);
 };
 
@@ -2508,6 +2515,151 @@ vProfile=function(){
   var i=h.indexOf(K);
   return i>-1?h.slice(0,i)+athEditBlock(a)+h.slice(i):h+athEditBlock(a);
 };
+
+// ---- HIIT mesafe hesaplama (ASR tabanlı), tarih raporları ve yedek
+SETK.push('hiit');
+var HG=['-','Grup 1 – Dayanıklılık','Grup 2 – Hibrit','Grup 3 – Hız'];
+var hiitPlan=today(),hiitEdit=false,hiitDate=today();
+function hiitCfg(){return Object.assign({pct:0.1,run:15,rest:15,setMin:4,sets:2,cone:5},db.hiit||{});}
+function hiitSet(k,v){
+  var n=parseFloat(String(v).replace(',','.'));if(!isFinite(n)||n<=0){toast('Sıfırdan büyük bir sayı yaz.');render();return;}
+  var c=Object.assign({},hiitCfg());c[k]=k==='pct'?n/100:n;db.hiit=c;save();render();
+}
+function pctl(a,p){var s=a.slice().sort(function(x,y){return x-y}),r=(s.length-1)*p,lo=Math.floor(r),hi=Math.ceil(r);return s[lo]+(s[hi]-s[lo])*(r-lo);}
+function lastOn(aid,key,upTo){var b=null;db.records.forEach(function(r){if(r.a===aid&&r.d<=upTo&&r.v[key]!=null&&(!b||r.d>b.d))b={d:r.d,v:r.v[key]};});return b;}
+function hiitRows(){
+  var c=hiitCfg(),L=[];
+  db.athletes.forEach(function(a){var m=lastOn(a.id,'mas',hiitPlan),s=lastOn(a.id,'vmax',hiitPlan);if(m&&s)L.push({a:a,mss:s.v,mas:m.v,asr:s.v-m.v,md:m.d,sd:s.d});});
+  var as=L.map(function(x){return x.asr}),p1=as.length>=3?pctl(as,1/3):null,p2=as.length>=3?pctl(as,2/3):null,reps=Math.floor(c.setMin*60/(c.run+c.rest));
+  L.forEach(function(x){
+    x.g=p1==null?0:x.asr<=p1?1:x.asr<=p2?2:3;
+    x.tv=x.mas+x.asr*c.pct;x.ms=x.tv/3.6;x.dist=x.ms*c.run;x.cone=Math.round(x.dist/c.cone)*c.cone;x.reps=reps;x.tot=x.dist*reps*c.sets;x.d10=x.ms*10;x.d15=x.ms*15;x.d20=x.ms*20;
+  });
+  return L.sort(function(x,y){return (x.g-y.g)||x.a.n.localeCompare(y.a.n,'tr');});
+}
+function hiitLine(c){return 'ASR %'+Math.round(c.pct*10000)/100+' · koşu '+c.run+' sn / dinlenme '+c.rest+' sn · set '+c.setMin+' dk × '+c.sets+' set · koni '+c.cone+' m';}
+function hiitTable(L,rep){
+  var f1=function(x){return x.toFixed(1)},f0=function(x){return Math.round(x)};
+  return '<table'+(rep?'':' class="tb" style="min-width:760px"')+'><thead><tr><th>Sporcu</th><th>Grup</th><th>MSS</th><th>MAS</th><th>MAS tarihi</th><th>ASR</th><th>Hedef hız</th><th>Mesafe (m)</th><th>Koni (m)</th><th>Tekrar</th><th>Toplam (m)</th><th>10 sn</th><th>15 sn</th><th>20 sn</th></tr></thead><tbody>'+L.map(function(x){
+    return '<tr><td>'+esc(x.a.n)+'</td><td>'+esc(HG[x.g].replace('Grup ',''))+'</td><td>'+f1(x.mss)+'</td><td>'+f1(x.mas)+'</td><td>'+trDate(x.md)+'</td><td>'+x.asr.toFixed(2)+'</td><td>'+x.tv.toFixed(1)+'</td><td><b>'+x.dist.toFixed(1)+'</b></td><td><b>'+x.cone+'</b></td><td>'+x.reps+'</td><td>'+f0(x.tot)+'</td><td>'+f0(x.d10)+'</td><td>'+f0(x.d15)+'</td><td>'+f0(x.d20)+'</td></tr>';}).join('')+'</tbody></table>';
+}
+function hiitGroups(L){
+  return [1,2,3].map(function(g){
+    var q=L.filter(function(x){return x.g===g});if(!q.length)return '';
+    var av=function(k){return q.reduce(function(s,x){return s+x[k]},0)/q.length};
+    return '<div class="rank"><div class="top"><span><b>'+HG[g]+'</b></span><span>'+q.length+' sporcu</span></div><p class="dim" style="margin:4px 0 0">Ort. ASR '+av('asr').toFixed(2)+' · ort. hedef hız '+av('tv').toFixed(1)+' km/sa · ort. mesafe '+av('dist').toFixed(1)+' m</p></div>';}).join('');
+}
+function vHiit(){
+  var c=hiitCfg(),L=hiitRows(),miss=db.athletes.filter(function(a){return !L.some(function(x){return x.a.id===a.id})});
+  var inp=function(id,k,lbl,val){return '<div><label for="'+id+'">'+lbl+'</label><input id="'+id+'" inputmode="decimal" value="'+val+'" onchange="hiitSet(\''+k+'\',this.value)"></div>';};
+  var h='<button class="back" onclick="go(\'prog\')">Programa dön</button><h1>HIIT mesafe hesaplama</h1><p class="sub">MSS ve MAS değerlerinden ASR, grup ve koşu mesafeleri otomatik hesaplanır.</p>';
+  h+='<div class="form"><b>Ayarlar</b><div class="two">'+inp('hs-pct','pct','ASR yüzdesi (%)',Math.round(c.pct*10000)/100)+inp('hs-run','run','Koşu süresi (sn)',c.run)+inp('hs-rest','rest','Dinlenme süresi (sn)',c.rest)+inp('hs-set','setMin','Set süresi (dk)',c.setMin)+inp('hs-sets','sets','Set sayısı',c.sets)+inp('hs-cone','cone','Koni yuvarlama (m)',c.cone)+'</div>'+
+    '<label for="hs-date">Hesaplama tarihi (bu tarihe kadarki son MAS ve MSS değerleri kullanılır)</label><input id="hs-date" type="date" value="'+hiitPlan+'" onchange="hiitPlan=this.value||today();render()"></div>';
+  if(!L.length)h+='<div class="empty"><p>Henüz hesaplanacak veri yok. Sporcuların MSS ve MAS değerlerini aşağıdan gir ya da Excel aktar ile yükle.</p></div>';
+  else{
+    h+='<h3 class="ct" style="margin-top:18px">Gruplar</h3>'+hiitGroups(L)+'<h3 class="ct" style="margin-top:18px">Sporcu planı</h3><div class="tw">'+hiitTable(L,false)+'</div>';
+    h+='<div class="row" style="margin-top:12px"><button class="btn" onclick="hiitPdf()">PDF rapor</button><button class="btn ghost" onclick="hiitCsv()">Excel (CSV) indir</button></div>';
+  }
+  if(miss.length)h+='<p class="dim" style="margin:12px 0 0">MSS ya da MAS değeri eksik: '+esc(miss.map(function(a){return a.n}).join(', '))+'</p>';
+  h+='<div class="row" style="margin:18px 0 8px"><button class="btn ghost" onclick="hiitEdit=!hiitEdit;render()">'+(hiitEdit?'MAS / MSS girişini kapat':'MAS / MSS değerlerini gir')+'</button></div>';
+  if(hiitEdit){
+    h+='<div class="form"><b>MAS / MSS girişi</b><p class="dim" style="margin:6px 0">Testin yapıldığı tarihi yaz, sadece değiştirmek istediklerinin değerini gir. Boş bıraktıkların kaydedilmez. Her yeni test için farklı tarih yaz, eski testler silinmez; aynı tarihte aynı ölçüm varsa o tarihteki değer güncellenir.</p>'+
+      '<label for="hm-d">Test tarihi</label><input id="hm-d" type="date" value="'+hiitDate+'" onchange="hiitDate=this.value">'+
+      '<div class="tw" style="margin-top:10px"><table class="tb" style="min-width:300px"><thead><tr><th>Sporcu</th><th>MSS (km/sa)</th><th>MAS (km/sa)</th></tr></thead><tbody>'+db.athletes.slice().sort(byname).map(function(a){
+        var m=lastOn(a.id,'mas','9999'),s=lastOn(a.id,'vmax','9999');
+        return '<tr><td>'+esc(a.n)+'</td><td><input id="hv-'+a.id+'" inputmode="decimal" aria-label="'+esc(a.n)+' MSS" placeholder="'+(s?s.v.toFixed(1):'')+'" style="width:84px"></td><td><input id="ha-'+a.id+'" inputmode="decimal" aria-label="'+esc(a.n)+' MAS" placeholder="'+(m?m.v.toFixed(1):'')+'" style="width:84px"></td></tr>';}).join('')+'</tbody></table></div>'+
+      '<div class="row" style="margin-top:12px"><button class="btn" onclick="hiitSave()">Kaydet</button></div></div>';
+  }
+  return h;
+}
+function hiitSave(){
+  var d=document.getElementById('hm-d').value;if(!d){toast('Test tarihini yaz.');return;}
+  var n=0;
+  db.athletes.forEach(function(a){
+    var s=txNum(document.getElementById('hv-'+a.id).value),m=txNum(document.getElementById('ha-'+a.id).value);
+    if(s==null&&m==null)return;
+    var rec=db.records.filter(function(r){return r.a===a.id&&r.d===d})[0];
+    if(!rec){rec={id:uid(),a:a.id,d:d,v:{}};db.records.push(rec);}
+    if(s!=null)rec.v.vmax=s;if(m!=null)rec.v.mas=m;n++;
+  });
+  if(!n){toast('Değer girmedin.');return;}
+  hiitEdit=false;if(d>hiitPlan)hiitPlan=d;save();render();toast(n+' sporcunun değeri '+trDate(d)+' tarihine kaydedildi.');
+}
+function hiitRep(){
+  var c=hiitCfg(),L=hiitRows();
+  return RS+'<div class="r"><h1>HIIT mesafe planı</h1><div class="m">FETHİYESPOR U19 · Hesaplama tarihi '+trDate(hiitPlan)+'</div><div class="m">'+hiitLine(c)+'</div><h2>Gruplar</h2><table><thead><tr><th>Grup</th><th>Sporcu</th><th>Ort. ASR</th><th>Ort. hedef hız</th><th>Ort. mesafe (m)</th></tr></thead><tbody>'+[1,2,3].map(function(g){var q=L.filter(function(x){return x.g===g});if(!q.length)return '';var av=function(k){return q.reduce(function(s,x){return s+x[k]},0)/q.length};return '<tr><td>'+HG[g]+'</td><td>'+q.length+'</td><td>'+av('asr').toFixed(2)+'</td><td>'+av('tv').toFixed(1)+'</td><td>'+av('dist').toFixed(1)+'</td></tr>';}).join('')+'</tbody></table><h2>Sporcu planı</h2>'+hiitTable(L,true)+'<div class="ft">Hedef hız = MAS + ASR × ASR yüzdesi. Mesafe = hedef hız (m/sn) × koşu süresi. Gruplar ASR değerine göre üç eşit dilimdir. MAS tarihi, kullanılan değerin test günüdür.</div></div>';
+}
+function hiitPdf(){makePdf(hiitRep(),'HIIT-mesafe-'+hiitPlan+'.pdf');}
+function hiitCsv(){
+  var L=hiitRows();
+  dlFile('hiit-mesafe-'+hiitPlan+'.csv','Sporcu;Grup;MSS;MAS;MAS tarihi;ASR;Hedef hız (km/sa);Mesafe (m);Koni (m);Tekrar/set;Toplam (m);10 sn;15 sn;20 sn\r\n'+L.map(function(x){return [x.a.n,HG[x.g],x.mss,x.mas,x.md,x.asr,x.tv,x.dist,x.cone,x.reps,x.tot,x.d10,x.d15,x.d20].map(function(v){return typeof v==='number'?String(Math.round(v*100)/100).replace('.',','):v}).join(';')}).join('\r\n')+'\r\n');
+}
+var _vprH=vProg;
+vProg=function(){return '<div class="row" style="margin-bottom:8px"><button class="btn ghost" onclick="go(\'hiit\')">HIIT mesafe hesaplama</button></div>'+_vprH();};
+var _rdH=render;
+render=function(){
+  if(ROLE==='coach'&&view==='hiit'){document.getElementById('app').innerHTML=vHiit();if(typeof setNav==='function')setNav();return;}
+  _rdH();
+};
+
+// ---- Raporlarda test tarihleri
+function histTable(a,max,rep){
+  var by={};db.records.filter(function(r){return r.a===a.id}).forEach(function(r){by[r.d]=Object.assign(by[r.d]||{},derive(r.v));});
+  var ds=Object.keys(by).sort().slice(-max);if(!ds.length)return '';
+  var rows='';
+  T.forEach(function(g){g.m.forEach(function(k){
+    if(!ds.some(function(d){return by[d][k]!=null}))return;
+    rows+='<tr><td>'+M[k][0]+(M[k][1]?' ('+M[k][1]+')':'')+'</td>'+ds.map(function(d){return '<td>'+(by[d][k]!=null?fmt(k,by[d][k]):'-')+'</td>'}).join('')+'</tr>';});});
+  if(!rows)return '';
+  var tb='<table'+(rep?'':' class="tb" style="min-width:'+(200+ds.length*70)+'px"')+'><thead><tr><th>Ölçüm</th>'+ds.map(function(d){return '<th>'+trDate(d).slice(0,6)+trDate(d).slice(8)+'</th>'}).join('')+'</tr></thead><tbody>'+rows+'</tbody></table>';
+  return rep?'<h2>Test geçmişi (tarihe göre)</h2>'+tb:'<h3 class="ct" style="margin-top:18px">Test geçmişi</h3><div class="tw">'+tb+'</div><p class="dim" style="margin:4px 0 0">Her test kendi tarihinde saklanır, yeni test eski testin üzerine yazılmaz.</p>';
+}
+var _arD=athRep;
+athRep=function(a){
+  var h=_arD(a);
+  T.forEach(function(g){g.m.forEach(function(k){var s=series(a.id,k);if(!s.length)return;var l=s[s.length-1],pv=s.length>1?s[s.length-2]:null;
+    var key='<tr><td>'+M[k][0]+'</td><td>'+fmt(k,l.v)+' '+M[k][1]+'</td>';
+    h=h.replace(key,key+'<td>'+trDate(l.d)+(pv?' <span class="m">(önceki '+trDate(pv.d)+')</span>':'')+'</td>');});});
+  h=h.replace('<th>Ölçüm</th><th>Değer</th>','<th>Ölçüm</th><th>Değer</th><th>Test tarihi</th>');
+  var ht=histTable(a,6,true),mk='<h2>Yük ve risk</h2>',i=h.indexOf(mk);
+  if(ht){if(i<0)i=h.lastIndexOf('<div class="ft">');if(i>-1)h=h.slice(0,i)+ht+h.slice(i);}
+  return h;
+};
+var _trD=teamRep;
+teamRep=function(){
+  var h=_trD(),i=h.indexOf('<h2>Test özeti'),j=h.indexOf('</table>',i),cl='';
+  if(i<0)return h;
+  if(j<0){j=h.indexOf('<div class="ft">',i);if(j<0)j=h.length;cl='</tbody></table>';}
+  var sec=h.slice(i,j);
+  sec=sec.replace('<th>Ölçüm</th>','<th>Ölçüm</th><th>Son test</th>');
+  T.forEach(function(g){g.m.forEach(function(k){
+    var ds=act().map(function(a){var s=series(a.id,k);return s.length?s[s.length-1].d:null}).filter(function(x){return x});if(!ds.length)return;
+    ds.sort();sec=sec.replace('<tr><td>'+M[k][0]+'</td>','<tr><td>'+M[k][0]+'</td><td>'+trDate(ds[ds.length-1])+'</td>');});});
+  return h.slice(0,i)+sec+cl+h.slice(j);
+};
+var _vpH=vProfile;
+vProfile=function(){
+  var h=_vpH(),a=ath(selA);
+  if(view!=='profile'||!a||ROLE!=='coach')return h;
+  var ht=histTable(a,10,false),K='<div class="grp"><h2>Kayıtlar</h2>',i=h.indexOf(K);
+  if(!ht)return h;
+  return i>-1?h.slice(0,i)+ht+h.slice(i):h+ht;
+};
+
+// ---- Yedek
+function dlRaw(name,text,type){var u=URL.createObjectURL(new Blob([text],{type:type})),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(u);},1500);}
+function backupJson(){
+  var o={yedek_tarihi:new Date().toISOString(),sporcular:db.athletes.map(function(a){var c=Object.assign({},a);delete c.ph;delete c.invite;delete c.uid;return c}),testler:db.records,gps:db.gps,anketler:db.surveys,ayarlar:{hedefler:db.targets,hiit:db.hiit}};
+  dlRaw('yedek-'+today()+'.json',JSON.stringify(o),'application/json;charset=utf-8');toast('Yedek indirildi.');
+}
+function testsCsv(){
+  var by={};db.athletes.forEach(function(a){by[a.id]=a});
+  var rows=['Sporcu;Pozisyon;Doğum tarihi;Test tarihi;Ölçüm;Değer;Birim'];
+  db.records.slice().sort(function(x,y){return x.d<y.d?-1:x.d>y.d?1:0}).forEach(function(r){
+    var a=by[r.a];if(!a)return;var dv=derive(r.v);
+    Object.keys(M).forEach(function(k){if(dv[k]==null||!isFinite(dv[k]))return;rows.push([a.n,a.p||'',a.bd?trDate(a.bd):(a.y||''),trDate(r.d),M[k][0],String(Math.round(dv[k]*1000)/1000).replace('.',','),M[k][1]].join(';'));});});
+  dlFile('tum-testler-'+today()+'.csv',rows.join('\r\n')+'\r\n');
+}
 
 // ---- Uygulama olarak yükleme (PWA)
 var DEFERRED=null;
