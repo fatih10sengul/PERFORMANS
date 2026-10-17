@@ -1992,7 +1992,7 @@ async function boot(){
       showClaim();return;
     }
     await loadAll();
-    if(ROLE==='coach'&&collapseBody())save();
+    if(ROLE==='coach'){var _c1=collapseBody(),_c2=seedMatches();if(_c1||_c2)save();}
     if(ROLE==='athlete'){ME=db.athletes[0]?db.athletes[0].id:null;selA=ME;}
     authHide();chrome();
     view=ROLE==='athlete'?'me':'athletes';
@@ -2709,7 +2709,7 @@ vProfile=function(){
 // ---- Yedek
 function dlRaw(name,text,type){var u=URL.createObjectURL(new Blob([text],{type:type})),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(u);},1500);}
 function backupJson(){
-  var o={yedek_tarihi:new Date().toISOString(),sporcular:db.athletes.map(function(a){var c=Object.assign({},a);delete c.ph;delete c.invite;delete c.uid;return c}),testler:db.records,gps:db.gps,anketler:db.surveys,ayarlar:{hedefler:db.targets,hiit:db.hiit}};
+  var o={yedek_tarihi:new Date().toISOString(),sporcular:db.athletes.map(function(a){var c=Object.assign({},a);delete c.ph;delete c.invite;delete c.uid;return c}),testler:db.records,gps:db.gps,anketler:db.surveys,maclar:db.matches,ayarlar:{hedefler:db.targets,hiit:db.hiit}};
   dlRaw('yedek-'+today()+'.json',JSON.stringify(o),'application/json;charset=utf-8');toast('Yedek indirildi.');
 }
 function testsCsv(){
@@ -2720,6 +2720,91 @@ function testsCsv(){
     Object.keys(M).forEach(function(k){if(dv[k]==null||!isFinite(dv[k]))return;rows.push([a.n,a.p||'',a.bd?trDate(a.bd):(a.y||''),trDate(r.d),M[k][0],String(Math.round(dv[k]*1000)/1000).replace('.',','),M[k][1]].join(';'));});});
   dlFile('tum-testler-'+today()+'.csv',rows.join('\r\n')+'\r\n');
 }
+
+// ---- Maç verileri (TFF) — sporcu profilinin içinde
+SETK.push('matches');
+// p: [ad, ilk11(1/0), girdiği dk, çıktığı dk, gol, sarı]
+var MATCH_SEED=[
+{tff:363986,d:'2026-09-23',opp:'Isbaş Isparta 32',h:1,gf:1,ga:3,p:[
+['Erbay Efe Helvacı',1,0,90,0,0],['Kadir Yağızhan Köse',1,0,90,0,0],['Yusuf İçcan',1,0,90,0,0],['Samet Dönmezer',1,0,73,0,0],['Yusuf Kaya',1,0,46,0,0],['Celal Akkoyun',1,0,64,0,0],['Yusuf Efe Çağlar',1,0,46,0,0],['Melih Kurt',1,0,90,0,0],['Arda Yakup Yılmaz',1,0,90,0,1],['Ahmet Aksoy',1,0,90,0,1],['İsmail Manav',1,0,80,1,0],
+['Ömer Faruk Kadimli',0,46,90,0,0],['Dursun Naim Altun',0,46,90,0,0],['Hüseyin Demir',0,64,90,0,0],['Ahmet Yasir Özdemir',0,73,90,0,0],['Batu Bayram Daşdemir',0,80,90,0,0]]},
+{tff:363990,d:'2026-09-30',opp:'Bodrum FK',h:0,gf:0,ga:4,p:[
+['Ali Eren Yeşilkaya',1,0,90,0,0],['Kadir Yağızhan Köse',1,0,46,0,0],['Samet Dönmezer',1,0,90,0,1],['Yusuf Efe Çağlar',1,0,46,0,0],['Melih Kurt',1,0,75,0,0],['Celal Akkoyun',1,0,83,0,0],['Deniz Emre Eren',1,0,90,0,0],['Yusuf Kaya',1,0,46,0,0],['Arda Yakup Yılmaz',1,0,90,0,0],['Ömer Faruk Kadimli',1,0,90,0,0],['Yusuf İçcan',1,0,90,0,0],
+['Ahmet Aksoy',0,46,90,0,0],['Dursun Naim Altun',0,46,90,0,0],['İsmail Manav',0,46,90,0,0],['Hüseyin Demir',0,75,90,0,0],['Arda Ada Özkan',0,83,90,0,0]]},
+{tff:363993,d:'2026-10-07',opp:'Antalyaspor A.Ş.',h:1,gf:3,ga:4,p:[
+['Ramazan Tuna Ünay',1,0,90,0,0],['Samet Dönmezer',1,0,90,0,0],['Celal Akkoyun',1,0,46,1,0],['Melih Kurt',1,0,90,1,0],['Deniz Emre Eren',1,0,85,1,1],['Arda Yakup Yılmaz',1,0,90,0,0],['Yusuf İçcan',1,0,90,0,1],['Dursun Naim Altun',1,0,82,0,0],['Yusuf Efe Çağlar',1,0,61,0,0],['Ömer Faruk Kadimli',1,0,82,0,0],['İsmail Manav',1,0,90,0,1],
+['Yusuf Kaya',0,46,90,0,0],['Kadir Yağızhan Köse',0,61,90,0,0],['Ahmet Aksoy',0,82,90,0,0],['Hüseyin Demir',0,82,90,0,0],['Arda Ada Özkan',0,85,90,0,0]]},
+{tff:363996,d:'2026-10-14',opp:'Serik Spor',h:0,gf:2,ga:1,p:[
+['Erbay Efe Helvacı',1,0,90,0,0],['Melih Kurt',1,0,56,0,1],['Deniz Emre Eren',1,0,90,1,0],['Ahmet Aksoy',1,0,90,1,1],['Yusuf İçcan',1,0,90,0,0],['İsmail Manav',1,0,67,0,0],['Dursun Naim Altun',1,0,67,0,0],['Samet Dönmezer',1,0,90,0,1],['Celal Akkoyun',1,0,80,0,0],['Ömer Faruk Kadimli',1,0,90,0,0],['Arda Yakup Yılmaz',1,0,80,0,0],
+['Yusuf Efe Çağlar',0,56,90,0,0],['Kadir Yağızhan Köse',0,67,90,0,1],['Yusuf Kaya',0,67,90,0,0],['Hüseyin Demir',0,80,90,0,1],['Batu Bayram Daşdemir',0,80,90,0,0]]}
+];
+function seedMatches(){
+  if(!Array.isArray(db.matches))db.matches=[];
+  var ch=false;
+  MATCH_SEED.forEach(function(m){
+    var id='tff'+m.tff;
+    if(db.matches.some(function(x){return x.id===id}))return;
+    db.matches.push({id:id,tff:m.tff,d:m.d,opp:m.opp,h:m.h,gf:m.gf,ga:m.ga,pl:m.p.map(function(r){return {n:r[0],s:r[1],i:r[2],o:r[3],g:r[4],a:0,y:r[5]}})});
+    ch=true;
+  });
+  return ch;
+}
+function mStat(a){
+  var t={m:0,s:0,min:0,g:0,a:0,y:0},rows=[],tk=nTok(a.n);
+  (db.matches||[]).slice().sort(function(x,y){return x.d<y.d?-1:1}).forEach(function(m){
+    var pi=-1;
+    (m.pl||[]).some(function(p,i){if(nMatch(tk,nTok(p.n))){pi=i;return true}return false});
+    var p=pi>-1?m.pl[pi]:null;
+    rows.push({m:m,pi:pi,p:p});
+    if(!p)return;
+    t.m++;if(p.s)t.s++;t.min+=Math.max(0,(p.o||0)-(p.i||0));t.g+=p.g||0;t.a+=p.a||0;t.y+=p.y||0;
+  });
+  return {t:t,rows:rows};
+}
+function setAst(mid,pi,v){
+  var m=(db.matches||[]).find(function(x){return x.id===mid});if(!m||!m.pl[pi])return;
+  var n=parseInt(v,10);m.pl[pi].a=isFinite(n)&&n>0?n:0;save();render();toast('Asist kaydedildi');
+}
+function mScore(m){return m.h?m.gf+'-'+m.ga:m.ga+'-'+m.gf}
+function mTitle(m){return m.h?'Fethiyespor - '+m.opp:m.opp+' - Fethiyespor'}
+function mResCls(m){return m.gf>m.ga?'G':m.gf<m.ga?'M':'B'}
+function mSummaryCells(t){return '<td>'+t.m+'</td><td>'+t.s+'</td><td>'+t.min+'</td><td>'+t.g+'</td><td>'+t.a+'</td><td>'+t.y+'</td>';}
+function matchBlock(a,rep){
+  if(!(db.matches||[]).length)return '';
+  var r=mStat(a),t=r.t,edit=!rep&&ROLE==='coach';
+  var sum='<table'+(rep?'':' class="tb" style="min-width:0"')+'><thead><tr><th>Maç</th><th>İlk 11</th><th>Dakika</th><th>Gol</th><th>Asist</th><th>Sarı</th></tr></thead><tbody><tr>'+mSummaryCells(t)+'</tr></tbody></table>';
+  var rows=r.rows.map(function(x){
+    var m=x.m,p=x.p,durum=!p?'<span class="dim">Oynamadı</span>':p.s?(p.o<90?'İlk 11 ('+p.o+'\'de çıktı)':'İlk 11'):('Yedek ('+p.i+'\'de girdi)');
+    var ast=!p?'-':edit?'<input type="number" min="0" max="9" value="'+(p.a||0)+'" style="width:56px" aria-label="Asist" onchange="setAst(\''+m.id+'\','+x.pi+',this.value)">':(p.a||0);
+    return '<tr><td>'+trDate(m.d)+'</td><td>'+esc(mTitle(m))+' <b>'+mScore(m)+'</b></td><td>'+durum+'</td><td>'+(p?Math.max(0,p.o-p.i):'-')+'</td><td>'+(p?(p.g||0):'-')+'</td><td>'+ast+'</td></tr>';
+  }).join('');
+  var tb='<table'+(rep?'':' class="tb" style="min-width:560px"')+'><thead><tr><th>Tarih</th><th>Maç</th><th>Durum</th><th>Dk</th><th>Gol</th><th>Asist</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  if(rep)return '<h2>Maç istatistikleri</h2>'+sum+'<div style="height:8px"></div>'+tb+'<div class="m">Kaynak: TFF maç sayfaları. Dakikalar ilk 11 ve oyuncu değişikliklerinden hesaplanır (90 dk üzerinden).</div>';
+  return '<div class="grp"><h2>Maç verileri</h2><div class="tw">'+sum+'</div><div class="tw" style="margin-top:12px">'+tb+'</div><p class="dim" style="margin:6px 0 0">Kaynak: TFF. Dakikalar ilk 11 ve oyuncu değişikliklerinden hesaplanır (90 dk üzerinden, uzatma dakikası sayılmaz). TFF asist bilgisini yayınlamaz, asistleri sen girersin.</p></div>';
+}
+var _vpMc=vProfile;
+vProfile=function(){
+  var h=_vpMc(),a=ath(selA);
+  if(view!=='profile'||!a||ROLE!=='coach')return h;
+  var mb=matchBlock(a,false);if(!mb)return h;
+  var K='<div class="grp"><h2>Kayıtlar</h2>',i=h.indexOf(K);
+  return i>-1?h.slice(0,i)+mb+h.slice(i):h+mb;
+};
+var _arMc=athRep;
+athRep=function(a){
+  var h=_arMc(a),mb=matchBlock(a,true);if(!mb)return h;
+  var i=h.lastIndexOf('<div class="ft">');
+  return i>-1?h.slice(0,i)+mb+h.slice(i):h+mb;
+};
+var _trMc=teamRep;
+teamRep=function(){
+  var h=_trMc();if(!(db.matches||[]).length)return h;
+  var rs=act().map(function(a){return {a:a,t:mStat(a).t}}).filter(function(r){return r.t.m>0}).sort(function(x,y){return y.t.min-x.t.min});
+  if(!rs.length)return h;
+  var sec='<h2>Maç istatistikleri</h2><table><thead><tr><th>Sporcu</th><th>Maç</th><th>İlk 11</th><th>Dakika</th><th>Gol</th><th>Asist</th><th>Sarı</th></tr></thead><tbody>'+rs.map(function(r){return '<tr><td>'+esc(r.a.n)+'</td>'+mSummaryCells(r.t)+'</tr>'}).join('')+'</tbody></table>';
+  var i=h.lastIndexOf('<div class="ft">');
+  return i>-1?h.slice(0,i)+sec+h.slice(i):h+sec;
+};
 
 // ---- Uygulama olarak yükleme (PWA)
 var DEFERRED=null;
