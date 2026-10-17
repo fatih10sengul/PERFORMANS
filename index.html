@@ -697,9 +697,10 @@ async function makePdf(html,filename){
     if(!window.jspdf)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
     var box=document.createElement('div');box.style.cssText='position:fixed;left:-10000px;top:0;width:794px;background:#fff;font-family:"IBM Plex Sans",Arial,sans-serif';box.innerHTML=html;document.body.appendChild(box);
     if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+    var bk=[],br=box.getBoundingClientRect();box.querySelectorAll('tr,h2,h3,.rank,.m,.ft').forEach(function(e){bk.push(Math.round((e.getBoundingClientRect().top-br.top)*2));});
     var cv=await html2canvas(box,{scale:2,backgroundColor:'#ffffff'});document.body.removeChild(box);
-    var pdf=new window.jspdf.jsPDF('p','pt','a4'),pw=595.28,ph=841.89,sc=pw/cv.width,pp=Math.floor(ph/sc);
-    for(var y=0,pg=0;y<cv.height;y+=pp,pg++){var hh=Math.min(pp,cv.height-y),t=document.createElement('canvas');t.width=cv.width;t.height=hh;var cx=t.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,t.width,hh);cx.drawImage(cv,0,y,cv.width,hh,0,0,cv.width,hh);if(pg)pdf.addPage();pdf.addImage(t.toDataURL('image/jpeg',.92),'JPEG',0,0,pw,hh*sc);}
+    var pdf=new window.jspdf.jsPDF('p','pt','a4'),pw=595.28,ph=841.89,sc=pw/cv.width,plan=pdfPlan(cv.height,ph/sc,bk),ps=sc*plan.f,dw=cv.width*ps,dx=(pw-dw)/2;
+    plan.pages.forEach(function(g,pg){var hh=Math.round(g.h),t=document.createElement('canvas');t.width=cv.width;t.height=hh;var cx=t.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,t.width,hh);cx.drawImage(cv,0,Math.round(g.y),cv.width,hh,0,0,cv.width,hh);if(pg)pdf.addPage();pdf.addImage(t.toDataURL('image/jpeg',.92),'JPEG',dx,0,dw,hh*ps);});
     await dl.save({filename:filename,data:pdf.output('blob')});
   }catch(e){if(e&&e.code==='declined')return;toast('PDF oluşturulamadı.');}
 }
@@ -2667,7 +2668,7 @@ function hiitSave(){
 }
 function hiitRep(){
   var c=hiitCfg(),L=hiitRows();
-  return RS+'<div class="r"><h1>HIIT mesafe planı</h1><div class="m">FETHİYESPOR U19 · Hesaplama tarihi '+trDate(hiitPlan)+'</div><div class="m">'+hiitLine(c)+'</div><h2>Gruplar</h2><table><thead><tr><th>Grup</th><th>Sporcu</th><th>'+(hiitMas()?'Ort. MAS':'Ort. ASR')+'</th><th>Ort. hedef hız</th><th>Ort. mesafe (m)</th></tr></thead><tbody>'+[1,2,3].map(function(g){var q=L.filter(function(x){return x.g===g});if(!q.length)return '';var av=function(k){return q.reduce(function(s,x){return s+x[k]},0)/q.length};return '<tr><td>'+HGN(g)+'</td><td>'+q.length+'</td><td>'+(hiitMas()?av('mas').toFixed(1):av('asr').toFixed(2))+'</td><td>'+av('tv').toFixed(1)+'</td><td>'+av('dist').toFixed(1)+'</td></tr>';}).join('')+'</tbody></table><h2>Sporcu planı</h2>'+hiitTable(L,true)+'<div class="ft">'+(hiitMas()?'Hedef hız = MAS × MAS yüzdesi. Mesafe = hedef hız (m/sn) × koşu süresi. Gruplar MAS değerine göre üç eşit dilimdir (Grup 1 en düşük MAS).':'Hedef hız = MAS + ASR × ASR yüzdesi. Mesafe = hedef hız (m/sn) × koşu süresi. Gruplar ASR değerine göre üç eşit dilimdir.')+' MAS tarihi, kullanılan değerin test günüdür.</div></div>';
+  return RS+'<style>.r.hc{padding:26px 32px}.r.hc h1{font-size:30px}.r.hc h2{margin:14px 0 4px;padding-top:6px}.r.hc th,.r.hc td{padding:2.5px 3px;font-size:11px}.r.hc .ft{margin-top:12px}</style><div class="r hc"><h1>HIIT mesafe planı</h1><div class="m">FETHİYESPOR U19 · Hesaplama tarihi '+trDate(hiitPlan)+'</div><div class="m">'+hiitLine(c)+'</div><h2>Gruplar</h2><table><thead><tr><th>Grup</th><th>Sporcu</th><th>'+(hiitMas()?'Ort. MAS':'Ort. ASR')+'</th><th>Ort. hedef hız</th><th>Ort. mesafe (m)</th></tr></thead><tbody>'+[1,2,3].map(function(g){var q=L.filter(function(x){return x.g===g});if(!q.length)return '';var av=function(k){return q.reduce(function(s,x){return s+x[k]},0)/q.length};return '<tr><td>'+HGN(g)+'</td><td>'+q.length+'</td><td>'+(hiitMas()?av('mas').toFixed(1):av('asr').toFixed(2))+'</td><td>'+av('tv').toFixed(1)+'</td><td>'+av('dist').toFixed(1)+'</td></tr>';}).join('')+'</tbody></table><h2>Sporcu planı</h2>'+hiitTable(L,true)+'<div class="ft">'+(hiitMas()?'Hedef hız = MAS × MAS yüzdesi. Mesafe = hedef hız (m/sn) × koşu süresi. Gruplar MAS değerine göre üç eşit dilimdir (Grup 1 en düşük MAS).':'Hedef hız = MAS + ASR × ASR yüzdesi. Mesafe = hedef hız (m/sn) × koşu süresi. Gruplar ASR değerine göre üç eşit dilimdir.')+' MAS tarihi, kullanılan değerin test günüdür.</div></div>';
 }
 function hiitPdf(){makePdf(hiitRep(),'HIIT-mesafe-'+hiitPlan+'.pdf');}
 function hiitCsv(){
@@ -2867,6 +2868,31 @@ function seedProgram(){
     x.ex.forEach(function(e){if(!dd.ex.some(function(y){return y.id===e.id}))dd.ex.push(Object.assign({},e));});
   });
   db.progSeed=done.concat(done.indexOf('v1')>-1?['v2']:['v1','v2']);return true;
+}
+
+// ---- PDF sayfalama: tek sayfaya sığabiliyorsa sığdır, satırları ortadan kesme
+function pdfPlan(H,pageH,bk){
+  bk=(bk||[]).filter(function(b){return b>0&&b<H}).sort(function(a,b){return a-b});
+  function cut(f){
+    var ph2=pageH/f,pages=[],y=0;
+    while(y<H-1){
+      var lim=y+ph2;
+      if(lim>=H-1){pages.push({y:y,h:H-y});break;}
+      var c=lim;
+      for(var i=bk.length-1;i>=0;i--){if(bk[i]<=lim&&bk[i]>y+ph2*0.4){c=bk[i];break;}}
+      pages.push({y:y,h:c-y});y=c;
+    }
+    return pages;
+  }
+  var n=Math.max(1,Math.ceil(H/pageH-1e-6)),f=1,pages=cut(1);
+  // taşma küçükse (en fazla %20) bir sayfa eksiğe sığacak kadar küçült
+  if(n>1&&H<=(n-1)*pageH*1.2){
+    for(var k=0.97;k>=0.8;k-=0.02){
+      var q=cut(k*Math.min(1,(n-1)*pageH/H));
+      if(q.length<=n-1){f=k*Math.min(1,(n-1)*pageH/H);pages=q;break;}
+    }
+  }
+  return {f:f,pages:pages};
 }
 
 // ---- Uygulama olarak yükleme (PWA)
