@@ -2103,7 +2103,7 @@ function xlPanel(){
 var _vaX=vAthletes;
 vAthletes=function(){
   var h=_vaX();if(ROLE!=='coach')return h;
-  var row='<div class="row" style="margin-bottom:8px"><button class="btn ghost" onclick="xlToggle()">'+(xlOpen?'Excel formunu kapat':'Excel\'den ekle')+'</button>'+(db.athletes.length?'<button class="btn ghost" onclick="inviteCsv()">Davet kodlarını indir</button>':'')+'</div>'+(xlOpen?xlPanel():'');
+  var row=db.athletes.length?'<div class="row" style="margin-bottom:8px"><button class="btn ghost" onclick="inviteCsv()">Davet kodlarını indir</button></div>':'';
   var K='<div class="row"><button class="btn ghost" onclick="go(\'entry\')">';
   return h.indexOf(K)>-1?h.replace(K,row+K):h.replace('</p>','</p>'+row);
 };
@@ -2236,7 +2236,7 @@ function txSample(){
   dlFile('sporcu-test-sablonu.csv','Ad Soyad;Pozisyon;Doğum tarihi;Tarih;'+ks.map(function(k){return TPL[k]}).join(';')+'\r\n'+rows.join('\r\n')+'\r\n');
 }
 function txPanel(){
-  var h='<div class="form"><b>Excel ya da CSV\'den sporcu ve test ekle</b><p class="dim" style="margin:6px 0">İlk satır başlık olsun. Her satır bir sporcu: Ad Soyad, Pozisyon, Doğum tarihi, Boy, Kilo, Tarih ve test sütunları (CMJ, sprint vb.). Hepsi isteğe bağlıdır, boş hücreler atlanır. VKİ boy ve kilodan otomatik hesaplanır, dosyadaki VKİ sütununa gerek yok. Sütun sırası önemli değil, tanınmayan sütunu aşağıdan seçersin.</p>'+
+  var h='<div class="form"><b>Excel aktar: sporcu bilgileri ve testler</b><p class="dim" style="margin:6px 0">İlk satır başlık olsun. Her satır bir sporcu: Ad Soyad, Pozisyon, Doğum tarihi, Boy, Kilo, Tarih ve test sütunları (CMJ, sprint vb.). Hepsi isteğe bağlıdır, boş hücreler atlanır. VKİ boy ve kilodan otomatik hesaplanır, dosyadaki VKİ sütununa gerek yok. Sütun sırası önemli değil, tanınmayan sütunu aşağıdan seçersin.</p>'+
     '<label for="tx-f">Dosya seç (.xlsx, .xls, .csv)</label><input id="tx-f" type="file" accept=".xlsx,.xls,.csv,text/csv" onchange="txRead(this)">'+
     '<div class="row" style="margin-top:8px"><button class="btn small ghost" onclick="txSample()">Boş şablon indir</button></div>';
   if(txRows){
@@ -2263,19 +2263,13 @@ function txPanel(){
   return h+'</div>';
 }
 function txBlock(){
-  return '<div class="row" style="margin:12px 0"><button class="btn ghost" onclick="txToggle()">'+(txOpen?'Form\'u kapat':'Excel\'den sporcu + test ekle')+'</button></div>'+(txOpen?txPanel():'');
+  return '<div class="row" style="margin:12px 0"><button class="btn ghost" onclick="txToggle()">'+(txOpen?'Excel aktarımını kapat':'Excel aktar')+'</button></div>'+(txOpen?txPanel():'');
 }
-var _veX=vEntry;
-vEntry=function(){
-  var h=_veX();if(ROLE!=='coach')return h;
-  var i=h.indexOf('</p>');
-  return i>-1?h.slice(0,i+4)+txBlock()+h.slice(i+4):txBlock()+h;
-};
 var _vaX2=vAthletes;
 vAthletes=function(){
-  var h=_vaX2();if(ROLE!=='coach'||!db.athletes.length)return h;
+  var h=_vaX2();if(ROLE!=='coach')return h;
   var K='<div class="row"><button class="btn ghost" onclick="go(\'entry\')">';
-  var b='<div class="row" style="margin-bottom:8px"><button class="btn ghost" onclick="txToggle()">'+(txOpen?'Form\'u kapat':'Excel\'den sporcu + test ekle')+'</button></div>'+(txOpen?txPanel():'');
+  var b='<div class="row" style="margin-bottom:8px"><button class="btn ghost" onclick="txToggle()">'+(txOpen?'Excel aktarımını kapat':'Excel aktar')+'</button></div>'+(txOpen?txPanel():'');
   return h.indexOf(K)>-1?h.replace(K,b+K):h.replace('</p>','</p>'+b);
 };
 
