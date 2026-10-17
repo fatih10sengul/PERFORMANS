@@ -2287,7 +2287,7 @@ function rcMas(rows){
   var hr=-1,ni=-1,mi=-1,si=-1;
   for(var i=0;i<Math.min(rows.length,15)&&hr<0;i++){
     var n=-1,m=-1,s2=-1;
-    rows[i].forEach(function(c,j){var f=fold(c);if(f==='sporcu'||f==='oyuncu'||f==='isim')n=j;else if(/^mas/.test(f))m=j;else if(/^mss/.test(f))s2=j;});
+    rows[i].forEach(function(c,j){var f=fold(c);if(f==='sporcu'||f==='oyuncu'||f==='isim')n=j;else if(m<0&&/^mas/.test(f))m=j;else if(s2<0&&/^mss/.test(f))s2=j;});
     if(n>=0&&m>=0){hr=i;ni=n;mi=m;si=s2;}
   }
   if(hr<0)return null;
