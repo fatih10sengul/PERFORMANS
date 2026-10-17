@@ -2142,7 +2142,7 @@ function txGuess(hd){
   var nm=-1,sn=-1,dt=-1;txPs=-1;txBd=-1;
   hd.forEach(function(h,i){var x=trAscii(h);
     if(dt<0&&/^(tarih|testtarihi|date|testgunu)$/.test(x))dt=i;
-    else if(sn<0&&/^(soyad|soyadi|surname|lastname)$/.test(x))sn=i;
+    else if(sn<0&&/^(soyad|soyadi|surname|lastname|soyisim)$/.test(x))sn=i;
     else if(txPs<0&&/^(pozisyon|mevki|position|post)$/.test(x))txPs=i;
     else if(txBd<0&&/^(dogum|dogumtarihi|dogumtar|dogumyili|dogumyil|dtarihi|dogumtarih|birth|birthdate|birthyear)$/.test(x))txBd=i;
     else if(nm<0&&/^(ad|adi|isim|name|firstname|adsoyad|adisoyadi|sporcu|oyuncu|futbolcu|player)$/.test(x))nm=i;});
@@ -2152,7 +2152,7 @@ function txGuess(hd){
 }
 function txDate(v){
   if(v==null||v==='')return null;
-  if(v instanceof Date&&!isNaN(v))return v.getFullYear()+'-'+('0'+(v.getMonth()+1)).slice(-2)+'-'+('0'+v.getDate()).slice(-2);
+  if(v instanceof Date&&!isNaN(v)){v=new Date(v.getTime()+12*36e5);return v.getFullYear()+'-'+('0'+(v.getMonth()+1)).slice(-2)+'-'+('0'+v.getDate()).slice(-2);}
   if(typeof v==='number'){if(v>20000&&v<80000){var d=new Date(Date.UTC(1899,11,30)+Math.round(v)*864e5);return d.getUTCFullYear()+'-'+('0'+(d.getUTCMonth()+1)).slice(-2)+'-'+('0'+d.getUTCDate()).slice(-2);}return null;}
   var t=String(v).trim(),m=t.match(/^(\d{4})[-.\/](\d{1,2})[-.\/](\d{1,2})/);
   if(m)return m[1]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[3]).slice(-2);
@@ -2166,67 +2166,226 @@ function txNum(v){
   var t=String(v==null?'':v).trim().replace(',','.');if(!t)return null;
   var n=parseFloat(t);return isFinite(n)&&n>0?n:null;
 }
-function txPrep(){
-  if(!txRows||!txMap)return null;
-  var idx={};db.athletes.forEach(function(a){idx[trKey(a.n)]=a;});
-  var out=[],unk={},bad=0,badv=0,vals=0,newA={},upA={},defDate=document.getElementById('tx-d')?document.getElementById('tx-d').value:'';
-  txRows.slice(1).forEach(function(r){
-    var nm=txNm>=0?String(r[txNm]==null?'':r[txNm]).trim():'';
-    if(txSn>=0&&r[txSn])nm=(nm+' '+String(r[txSn]).trim()).trim();
-    nm=nm.replace(/\s+/g,' ');if(!nm)return;
-    var k=trKey(nm),pr=txPs>=0?String(r[txPs]==null?'':r[txPs]).trim():'',pos=pr?normPos(pr):'',bi=txBd>=0?txBirth(r[txBd]):null;
-    var dr=txDt>=0?r[txDt]:'',d=(dr==null||String(dr).trim()==='')?(defDate||today()):txDate(dr);
-    var v={},sv={},n=0;
-    txMap.forEach(function(f,i){if(!f)return;
-      if(SVK[f]){var y=svNum(r[i]);if(y==null)return;if(y<SVK[f][2]||y>SVK[f][3]){badv++;return;}sv[f.slice(3)]=y;n++;return;}
-      var x=txNum(r[i]);if(x==null)return;if(f==='boy'&&x<3)x=Math.round(x*1000)/10;v[f]=x;n++;});
-    var a=idx[k];
-    if(!a){
-      if(!txAdd){if(n||pr||bi)unk[nm]=1;return;}
-      if(!newA[k])newA[k]={n:nm,p:pos||'Orta saha',y:bi?bi.y:null,bd:bi?bi.bd:'',unkPos:(pr&&pos===null)?pr:''};
-      else{if(bi&&!newA[k].y){newA[k].y=bi.y;newA[k].bd=bi.bd;}if(pos)newA[k].p=pos;}
-    }else if(pos||bi){
-      var u=upA[a.id]||(upA[a.id]={a:a});
-      if(pos&&pos!==a.p)u.p=pos;
-      if(bi&&(bi.bd?bi.bd!==a.bd:bi.y!==a.y))u.bi=bi;
-      if(!u.p&&!u.bi)delete upA[a.id];
-    }
-    if(!n)return;
-    if(!d){bad++;return;}
-    out.push({a:a,k:k,nm:nm,d:d,v:v,sv:sv,n:n});vals+=n;
+// ---- Hazır dosya düzenlerini tanıma
+var txFiles=[],txAmb={},txAmbKeys=[];
+var TRMON={oca:1,sub:2,mar:3,nis:4,may:5,haz:6,tem:7,agu:8,eyl:9,eki:10,kas:11,ara:12};
+M.agCtR=['5-0-5 sağ temas','ms','low',0];M.agCtL=['5-0-5 sol temas','ms','low',0];
+M.slQR=['Tek bacak hop RSI sağ','','high',2];M.slQL=['Tek bacak hop RSI sol','','high',2];M.hopAsym=['Hop RSI sağ/sol farkı','%','low',1];
+(function(){
+  function g(n){return T.filter(function(x){return x.n===n})[0];}
+  var a=g('5-0-5 çeviklik');a.f.push(['agCtR','Sağ temas süresi','ms'],['agCtL','Sol temas süresi','ms']);a.m.push('agCtR','agCtL');
+  var b=g('Tek bacak hop');b.f.push(['slQR','Sağ bacak RSI',''],['slQL','Sol bacak RSI','']);b.m.push('slQR','slQL','hopAsym');
+  g('Hop test').f.push(['hopRsi','Çift ayak RSI (hazır değer)','']);
+  g('DJ').f.push(['djRsi','RSI (hazır değer)','']);
+  TPL.agCtR='5-0-5 sağ temas (ms)';TPL.agCtL='5-0-5 sol temas (ms)';TPL.slQR='Tek bacak hop RSI sağ';TPL.slQL='Tek bacak hop RSI sol';TPL.hopRsi='Çift ayak hop RSI';TPL.djRsi='DJ RSI';
+  var d0=derive;derive=function(v){var o=d0(v);if(v.slQR&&v.slQL)o.hopAsym=Math.abs(v.slQR-v.slQL)/Math.max(v.slQR,v.slQL)*100;return o;};
+})();
+function fold(t){return String(t==null?'':t).toLocaleLowerCase('tr').replace(/ı/g,'i').replace(/ç/g,'c').replace(/ğ/g,'g').replace(/ö/g,'o').replace(/ş/g,'s').replace(/ü/g,'u').replace(/[^a-z0-9]/g,'');}
+function nTok(s){var t=String(s==null?'':s).replace(/\s+/g,' ').trim();if(!t)return [];var seen={},o=[];t.split(' ').forEach(function(w){var f=fold(w);if(f&&!seen[f]){seen[f]=1;o.push(f);}});return o;}
+function nTitle(s){var seen={};return String(s).replace(/\s+/g,' ').trim().split(' ').filter(function(w){var f=fold(w);if(!f||seen[f])return false;seen[f]=1;return true;}).map(function(w){var l=w.toLocaleLowerCase('tr');return l.charAt(0).toLocaleUpperCase('tr')+l.slice(1);}).join(' ');}
+function tokSub(a,b){return a.every(function(x){return b.some(function(y){return y===x||(x.length<y.length&&y.indexOf(x)===0);});});}
+function nMatch(a,b){return tokSub(a,b)||tokSub(b,a);}
+function cel(r,i){return r&&r[i]!=null?r[i]:'';}
+function fnDate(fn){var m=String(fn).match(/(\d{1,2})[.\-](\d{1,2})[.\-](20\d{2})/);return m?m[3]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2):'';}
+function bestOf(arr,mode){var v=arr.map(txNum).filter(function(x){return x!=null});if(!v.length)return null;return mode==='min'?Math.min.apply(null,v):Math.max.apply(null,v);}
+function isDateCell(c){return c instanceof Date||(typeof c==='string'&&/^\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4}$/.test(c.trim()));}
+function rcWeight(rows){
+  var hk=-1;for(var i=0;i<Math.min(rows.length,15)&&hk<0;i++){if(rows[i].some(function(c){return fold(c)==='kilo'}))hk=i;}
+  if(hk<1)return null;
+  var dr=-1;for(var j=hk-1;j>=0&&dr<0;j--){if(rows[j].some(isDateCell))dr=j;}
+  if(dr<0)return null;
+  var dc=[];rows[dr].forEach(function(c,i){if(isDateCell(c)&&fold(cel(rows[hk],i))==='kilo')dc.push(i);});
+  if(!dc.length)return null;
+  var boy=-1;rows[hk].forEach(function(c,i){if(boy<0&&fold(c)==='boy')boy=i;});
+  var recs=[];
+  rows.slice(hk+1).forEach(function(r){
+    var nm=String(cel(r,0)).trim();if(!nm||/^s[uü]tun/i.test(nm))return;
+    var any=false;
+    dc.forEach(function(c,k){
+      var v={},kg=txNum(r[c]);if(kg!=null)v.kilo=kg;
+      if(k===0&&boy>=0){var b=txNum(r[boy]);if(b!=null)v.boy=b<3?Math.round(b*1000)/10:b;}
+      if(Object.keys(v).length){any=true;recs.push({nm:nm,d:txDate(rows[dr][c]),v:v});}
+    });
+    if(!any)recs.push({nm:nm,v:{}});
   });
-  return {rows:out,badv:badv,unk:Object.keys(unk),bad:bad,vals:vals,newA:Object.keys(newA).map(function(k){return newA[k]}),upA:Object.keys(upA).map(function(k){return upA[k]})};
+  return {kind:'weight',label:'Kilo ve boy',recs:recs};
 }
-function txToggle(){txOpen=!txOpen;if(!txOpen){txRows=null;txMap=null;}render();}
-async function txRead(inp){
-  var f=inp.files[0];if(!f)return;
+function rcWeekly(rows,fn){
+  if(rows.length<2)return null;
+  var h=rows[0],cols=[];
+  h.forEach(function(c,i){if(i===0)return;var m=String(c).trim().match(/^(\d{1,2})\.?\s*([A-Za-zÇĞİÖŞÜçğıöşü]+)\.?$/);if(!m)return;var mo=TRMON[fold(m[2]).slice(0,3)];if(!mo)return;
+    var y=new Date().getFullYear(),d=new Date(y,mo-1,parseInt(m[1],10));if(d.getTime()-Date.now()>200*864e5)y--;
+    cols.push({i:i,d:y+'-'+('0'+mo).slice(-2)+'-'+('0'+parseInt(m[1],10)).slice(-2)});});
+  if(cols.length<2)return null;
+  var f=fold(fn),key=/cmj/.test(f)?'cmjH':/(^|[^a-z])sj/.test(String(fn).toLowerCase())||/sj/.test(f)?'sjH':'';
+  if(!key)return null;
+  var recs=[];
+  rows.slice(1).forEach(function(r){
+    var nm=String(cel(r,0)).trim();if(!nm||fold(nm)==='oyuncuadi')return;
+    var any=false;cols.forEach(function(c){var x=txNum(r[c.i]);if(x!=null){any=true;var v={};v[key]=x;recs.push({nm:nm,d:c.d,v:v});}});
+    if(!any)recs.push({nm:nm,v:{}});
+  });
+  return {kind:'weekly',label:'Haftalık '+(key==='cmjH'?'CMJ':'SJ')+' ('+cols.length+' tarih)',recs:recs};
+}
+function rcTrials(rows){
+  if(rows.length<3)return null;
+  var r0=rows[0],r1=rows[1],ng=0;
+  r1.forEach(function(c,i){if(i>0&&typeof c==='number')ng++;});
+  if(ng<2)return null;
+  var cols=[],cur='';
+  r0.forEach(function(c,i){
+    if(i===0)return;
+    var f=fold(c);if(f)cur=f;
+    if(typeof r1[i]!=='number'){if(f)cur=f;return;}
+    var key='';
+    if(/hop/.test(cur)){key=/sag/.test(cur)?'slQR':/sol/.test(cur)?'slQL':/cift/.test(cur)?'hopRsi':'';}
+    else if(cur==='sj')key='sjH';else if(cur==='cmj')key='cmjH';else if(/^dj/.test(cur))key='djRsi';
+    if(key)cols.push({i:i,k:key});
+  });
+  if(!cols.length)return null;
+  var recs=[];
+  rows.slice(2).forEach(function(r){
+    var nm=String(cel(r,0)).trim();if(!nm)return;
+    var v={};cols.forEach(function(c){var b=bestOf([r[c.i]].concat(v[c.k]!=null?[v[c.k]]:[]),'max');if(b!=null)v[c.k]=b;});
+    recs.push({nm:nm,v:v});
+  });
+  var ks={};cols.forEach(function(c){ks[c.k]=1});
+  return {kind:'trials',label:'Test ('+Object.keys(ks).map(function(k){return txFieldLabel(k).split(' · ')[0]}).filter(function(x,i,a){return a.indexOf(x)===i}).join(', ')+')',recs:recs};
+}
+function rcNamed(rows){
+  var hr=-1,ni=-1,si=-1;
+  for(var i=0;i<Math.min(rows.length,5)&&hr<0;i++){rows[i].forEach(function(c,j){var f=fold(c);if(f==='isim'||f==='adi'){ni=j;}else if(f==='soyisim'||f==='soyadi'){si=j;}});if(ni>=0)hr=i;else si=-1;}
+  if(hr<0)return null;
+  var m=[],last='';
+  rows[hr].forEach(function(c,j){
+    var f=fold(c),k='';
+    if(j===ni||j===si)return;
+    if(f==='010m')k='_g1';else if(f==='1020m')k='_g2';else if(f==='2030m')k='_g3';
+    else if(f==='sag505'){k='agR';last='R';}else if(f==='sol505'){k='agL';last='L';}
+    else if(f==='temass'||f==='temassuresi'||f==='temas'){k=last==='R'?'agCtR':last==='L'?'agCtL':'';}
+    else if(f==='kms'||f==='kmsa'||f==='maxhiz')k='vmax';
+    else k=txGuessField(c);
+    if(k)m.push({i:j,k:k});
+  });
+  if(!m.length)return null;
+  if(rows[hr].some(function(c){return /^(pozisyon|mevki|position|dogum|dogumtarihi|dogumyili|tarih|birth)/.test(fold(c))}))return null;
+  var recs=[];
+  rows.slice(hr+1).forEach(function(r){
+    var nm=(String(cel(r,ni)).trim()+' '+(si>=0?String(cel(r,si)).trim():'')).trim();if(!nm)return;
+    var v={},g={};
+    m.forEach(function(c){var x=txNum(r[c.i]);if(x==null)return;if(c.k.charAt(0)==='_')g[c.k]=x;else v[c.k]=x;});
+    var rd=function(x){return Math.round(x*1000)/1000};if(g._g1!=null){v.s10=g._g1;if(g._g2!=null){v.s20=rd(g._g1+g._g2);if(g._g3!=null)v.s30=rd(g._g1+g._g2+g._g3);}}
+    recs.push({nm:nm,v:v});
+  });
+  var ks={};m.forEach(function(c){ks[c.k.charAt(0)==='_'?'sprint':c.k]=1});
+  var lab=ks.sprint?'Sprint 10-20-30 m':ks.vmax?'Maksimum sprint hızı':ks.agR?'5-0-5 çeviklik':'Test sütunları';
+  return {kind:'named',label:lab,recs:recs};
+}
+function txDetect(rows,fn){return rcWeight(rows)||rcWeekly(rows,fn)||rcTrials(rows)||rcNamed(rows);}
+
+// ---- Çözümleme ve önizleme
+function cid(c){return c.id||c.nk;}
+function txPrep(){
+  var recs=[],defDate=document.getElementById('tx-d')?document.getElementById('tx-d').value:'',bad=0,badv=0;
+  txFiles.forEach(function(f){if(!f.recs)return;f.recs.forEach(function(r){recs.push({nm:r.nm,d:r.d||f.date||defDate||today(),v:r.v||{},sv:{},pr:'',bi:null});});});
+  if(txRows&&txMap){
+    txRows.slice(1).forEach(function(r){
+      var nm=txNm>=0?String(r[txNm]==null?'':r[txNm]).trim():'';
+      if(txSn>=0&&r[txSn])nm=(nm+' '+String(r[txSn]).trim()).trim();
+      nm=nm.replace(/\s+/g,' ');if(!nm)return;
+      var pr=txPs>=0?String(r[txPs]==null?'':r[txPs]).trim():'',bi=txBd>=0?txBirth(r[txBd]):null;
+      var dr=txDt>=0?r[txDt]:'',d=(dr==null||String(dr).trim()==='')?(defDate||today()):txDate(dr);
+      var v={},sv={};
+      txMap.forEach(function(f,i){if(!f)return;
+        if(SVK[f]){var y=svNum(r[i]);if(y==null)return;if(y<SVK[f][2]||y>SVK[f][3]){badv++;return;}sv[f.slice(3)]=y;return;}
+        var x=txNum(r[i]);if(x==null)return;if(f==='boy'&&x<3)x=Math.round(x*1000)/10;v[f]=x;});
+      var n=Object.keys(v).length+Object.keys(sv).length;
+      if(n&&!d){bad++;return;}
+      recs.push({nm:nm,d:d,v:v,sv:sv,pr:pr,bi:bi});
+    });
+  }
+  var cans=db.athletes.map(function(a){return {id:a.id,a:a,tok:nTok(a.n),isNew:false};});
+  var raw={};
+  recs.forEach(function(r){var tk=nTok(r.nm);if(!tk.length)return;r.tk=tk;r.k=tk.join(' ');if(!raw[r.k])raw[r.k]={tk:tk,nm:r.nm};});
+  var keys=Object.keys(raw).sort(function(x,y){return raw[y].tk.length-raw[x].tk.length;});
+  var map={},amb=[],unk={};
+  keys.forEach(function(k){
+    var tk=raw[k].tk,hit=cans.filter(function(c){return c.tok.join(' ')===k});
+    if(!hit.length)hit=cans.filter(function(c){return nMatch(tk,c.tok)});
+    if(hit.length===1)map[k]=hit[0];
+    else if(hit.length>1){
+      var ch=txAmb[k];
+      if(ch==='skip')map[k]=null;
+      else if(ch){var c=cans.filter(function(x){return cid(x)===ch})[0];if(c)map[k]=c;else amb.push({k:k,nm:raw[k].nm,c:hit});}
+      else amb.push({k:k,nm:raw[k].nm,c:hit});
+    }else if(txAdd){var nc={id:null,nk:'n:'+k,tok:tk,isNew:true,name:nTitle(raw[k].nm)};cans.push(nc);map[k]=nc;}
+    else{map[k]=null;unk[raw[k].nm.trim()]=1;}
+  });
+  var rowsM={},order=[],newM={},upA={},vals=0;
+  recs.forEach(function(r){
+    if(!r.k)return;var c=map[r.k];if(!c)return;
+    var pos=r.pr?normPos(r.pr):'';
+    if(c.isNew){
+      var e=newM[c.nk]||(newM[c.nk]={n:c.name,p:'Orta saha',y:null,bd:'',unkPos:'',nk:c.nk});
+      if(pos)e.p=pos;else if(r.pr&&pos===null)e.unkPos=r.pr;
+      if(r.bi&&!e.y){e.y=r.bi.y;e.bd=r.bi.bd;}
+    }else if(pos||r.bi){
+      var u=upA[c.id]||(upA[c.id]={a:c.a});
+      if(pos&&pos!==c.a.p)u.p=pos;
+      if(r.bi&&(r.bi.bd?r.bi.bd!==c.a.bd:r.bi.y!==c.a.y))u.bi=r.bi;
+      if(!u.p&&!u.bi)delete upA[c.id];
+    }
+    var n=Object.keys(r.v).length+Object.keys(r.sv).length;
+    if(!n)return;
+    var rk=cid(c)+'|'+r.d,x=rowsM[rk];
+    if(!x){x=rowsM[rk]={a:c.a||null,nk:c.nk||null,nm:c.name||c.a.n,d:r.d,v:{},sv:{},n:0};order.push(rk);}
+    Object.assign(x.v,r.v);Object.assign(x.sv,r.sv);
+  });
+  var out=order.map(function(k){var x=rowsM[k];x.n=Object.keys(x.v).length+Object.keys(x.sv).length;vals+=x.n;return x;});
+  return {rows:out,badv:badv,unk:Object.keys(unk),bad:bad,vals:vals,amb:amb,newA:Object.keys(newM).map(function(k){return newM[k]}),upA:Object.keys(upA).map(function(k){return upA[k]})};
+}
+function txReset(){txFiles=[];txAmb={};txRows=null;txMap=null;}
+function txToggle(){txOpen=!txOpen;if(!txOpen)txReset();render();}
+async function txReadOne(f){
   var nm=f.name.toLowerCase(),rows;
-  try{
-    if(/\.(xlsx|xlsm|xls)$/.test(nm)){
-      if(!window.XLSX)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
-      var wb=XLSX.read(await f.arrayBuffer(),{type:'array',cellDates:true});
-      rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:''});
-    }else{rows=parseCSV((await f.text()).replace(/^﻿/,''));}
-  }catch(e){toast('Dosya okunamadı. .xlsx ya da .csv dene.');return;}
-  rows=rows.filter(function(r){return r.some(function(c){return String(c).trim()!==''})});
-  if(rows.length<2){toast('Dosyada veri satırı bulunamadı.');return;}
-  var g=txGuess(rows[0].map(String));
-  txRows=rows;txMap=g.map;txNm=g.nm;txSn=g.sn;txDt=g.dt;render();
+  if(/\.(xlsx|xlsm|xls)$/.test(nm)){
+    if(!window.XLSX)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+    var wb=XLSX.read(await f.arrayBuffer(),{type:'array',cellDates:true});
+    rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:''});
+  }else{rows=parseCSV((await f.text()).replace(/^﻿/,''));}
+  return rows.filter(function(r){return r.some(function(c){return String(c).trim()!==''})});
+}
+async function txRead(inp){
+  var fl=Array.prototype.slice.call(inp.files||[]);if(!fl.length)return;
+  txReset();var generic=null;
+  for(var i=0;i<fl.length;i++){
+    var f=fl[i],rows;
+    try{rows=await txReadOne(f);}catch(e){txFiles.push({name:f.name,kind:'',label:'Dosya okunamadı'});continue;}
+    if(rows.length<2){txFiles.push({name:f.name,kind:'',label:'Veri satırı bulunamadı'});continue;}
+    var d=null;try{d=txDetect(rows,f.name);}catch(e){d=null;}
+    if(d){d.name=f.name;d.date=fnDate(f.name);d.own=d.recs.some(function(r){return r.d});txFiles.push(d);}
+    else if(fl.length===1)generic=rows;
+    else txFiles.push({name:f.name,kind:'',label:'Düzen tanınmadı (tek başına seçip eşleştir)'});
+  }
+  if(generic){var g=txGuess(generic[0].map(String));txRows=generic;txMap=g.map;txNm=g.nm;txSn=g.sn;txDt=g.dt;}
+  if(!txFiles.length&&!txRows){toast('Dosya okunamadı. .xlsx ya da .csv dene.');return;}
+  render();
 }
 function txSet(w,i,v){
   if(w==='m')txMap[i]=v;else{var n=parseInt(v,10);if(w==='n')txNm=n;else if(w==='s')txSn=n;else if(w==='p')txPs=n;else if(w==='b')txBd=n;else txDt=n;
     txMap=txMap.map(function(k,j){return (j===txNm||j===txSn||j===txDt||j===txPs||j===txBd)?'':k;});}
   render();
 }
+function txAmbSet(i,v){var a=txAmbKeys[i];if(a){if(v)txAmb[a]=v;else delete txAmb[a];}render();}
+function txFileDate(i,v){if(txFiles[i])txFiles[i].date=v;render();}
 function txDo(){
   var P=txPrep();if(!P||(!P.rows.length&&!P.newA.length&&!P.upA.length)){toast('Eklenecek veri yok.');return;}
-  var idx={};
-  P.newA.forEach(function(x){var a={id:uid(),n:x.n,p:x.p,y:x.y||null};if(x.bd)a.bd=x.bd;db.athletes.push(a);});
-  db.athletes.forEach(function(a){idx[trKey(a.n)]=a;});
+  var ids={};
+  P.newA.forEach(function(x){var a={id:uid(),n:x.n,p:x.p,y:x.y||null};if(x.bd)a.bd=x.bd;db.athletes.push(a);ids[x.nk]=a;});
   P.upA.forEach(function(u){if(u.p)u.a.p=u.p;if(u.bi){u.a.y=u.bi.y;if(u.bi.bd)u.a.bd=u.bi.bd;}});
   var ins=0,upd=0,svN=0,svU=0;
   P.rows.forEach(function(x){
-    var a=x.a||idx[x.k];if(!a)return;
+    var a=x.a||ids[x.nk];if(!a)return;
     if(Object.keys(x.v).length){
       var ex=db.records.filter(function(r){return r.a===a.id&&r.d===x.d})[0];
       if(ex){ex.v=Object.assign({},ex.v,x.v);upd++;}
@@ -2238,7 +2397,7 @@ function txDo(){
       else{SV().push(Object.assign({id:uid(),a:a.id,d:x.d,rpe:null,dur:null,sleep:null,fat:null,sore:null,pain:[],seen:true},x.sv));svN++;}
     }
   });
-  txOpen=false;txRows=null;txMap=null;save();render();
+  txOpen=false;txReset();save();render();
   toast((P.newA.length?P.newA.length+' yeni sporcu, ':'')+ins+' test kaydı'+(svN+svU?', '+(svN+svU)+' anket kaydı':'')+' eklendi'+(upd?' ('+upd+' test kaydı güncellendi)':'')+'.');
 }
 function txSample(){
@@ -2248,13 +2407,18 @@ function txSample(){
   dlFile('sporcu-test-sablonu.csv','Ad Soyad;Pozisyon;Doğum tarihi;Tarih;'+ks.map(function(k){return TPL[k]||SVK[k][0]}).join(';')+'\r\n'+rows.join('\r\n')+'\r\n');
 }
 function txPanel(){
-  var h='<div class="form"><b>Excel aktar: sporcu bilgileri ve testler</b><p class="dim" style="margin:6px 0">İlk satır başlık olsun. Her satır bir sporcu: Ad Soyad, Pozisyon, Doğum tarihi, Boy, Kilo, Tarih, test sütunları (CMJ, sprint vb.) ve günlük anket sütunları (RPE, süre, uyku, yorgunluk, kas ağrısı). Hepsi isteğe bağlıdır, boş hücreler atlanır. VKİ boy ve kilodan otomatik hesaplanır, dosyadaki VKİ sütununa gerek yok. Sütun sırası önemli değil, tanınmayan sütunu aşağıdan seçersin.</p>'+
-    '<label for="tx-f">Dosya seç (.xlsx, .xls, .csv)</label><input id="tx-f" type="file" accept=".xlsx,.xls,.csv,text/csv" onchange="txRead(this)">'+
+  var h='<div class="form"><b>Excel aktar</b><p class="dim" style="margin:6px 0">Testlerini olduğu gibi seçebilirsin: SJ/CMJ/DJ, hop, sprint 10-20-30, 5-0-5, MSS, haftalık CMJ ve kilo-boy dosyaları tanınır. Birden fazla dosyayı aynı anda seçebilirsin. Sporcu adları dosyalar arasında farklı yazılsa da (yalnız soyad, yalnız ad) otomatik eşleşir. Pozisyon, doğum tarihi ve anket içeren basit bir tablo da yükleyebilirsin (ilk satır başlık).</p>'+
+    '<label for="tx-f">Dosya seç (.xlsx, .xls, .csv)</label><input id="tx-f" type="file" multiple accept=".xlsx,.xls,.csv,text/csv" onchange="txRead(this)">'+
     '<div class="row" style="margin-top:8px"><button class="btn small ghost" onclick="txSample()">Boş şablon indir</button></div>';
+  if(!txFiles.length&&!txRows)return h+'</div>';
+  if(txFiles.length){
+    h+='<div class="tw" style="margin-top:12px"><table class="tb" style="min-width:300px"><thead><tr><th>Dosya</th><th>Tanınan düzen</th><th>Tarih</th></tr></thead><tbody>'+txFiles.map(function(f,i){
+      return '<tr><td>'+esc(f.name.replace(/^\d{1,2}\.\d{1,2}\.\d{4}_/,'').slice(0,34))+'</td><td class="'+(f.kind?'c-ok':'c-warn')+'">'+esc(f.label)+(f.recs?' · '+f.recs.length+' kayıt':'')+'</td><td>'+(f.kind&&!f.own?'<input type="date" aria-label="Test tarihi" value="'+esc(f.date||'')+'" onchange="txFileDate('+i+',this.value)">':(f.own?'<span class="dim">dosyada</span>':'-'))+'</td></tr>';}).join('')+'</tbody></table></div>';
+  }
   if(txRows){
     var hd=txRows[0].map(String),col=function(i){return esc(hd[i]||('Sütun '+(i+1)))};
     var opt=function(sel){return '<option value="-1"'+(sel<0?' selected':'')+'>Yok</option>'+hd.map(function(x,i){return '<option value="'+i+'"'+(i===sel?' selected':'')+'>'+col(i)+'</option>'}).join('')};
-    h+='<div class="map" style="margin-top:12px"><div><label for="tx-n">Ad (ya da Ad Soyad)</label><select id="tx-n" onchange="txSet(\'n\',0,this.value)">'+opt(txNm)+'</select></div><div><label for="tx-s">Soyad (ayrı sütunsa)</label><select id="tx-s" onchange="txSet(\'s\',0,this.value)">'+opt(txSn)+'</select></div><div><label for="tx-t">Tarih (ölçüm / test günü)</label><select id="tx-t" onchange="txSet(\'t\',0,this.value)">'+opt(txDt)+'</select></div><div><label for="tx-p">Pozisyon</label><select id="tx-p" onchange="txSet(\'p\',0,this.value)">'+opt(txPs)+'</select></div><div><label for="tx-b">Doğum tarihi (ya da yılı)</label><select id="tx-b" onchange="txSet(\'b\',0,this.value)">'+opt(txBd)+'</select></div></div><label style="display:flex;gap:8px;align-items:center;margin-top:12px;color:var(--ink)"><input type="checkbox" id="tx-a"'+(txAdd?' checked':'')+' onchange="txAdd=this.checked;render()" style="width:auto"> Listede olup uygulamada olmayan sporcuları da ekle</label>';
+    h+='<div class="map" style="margin-top:12px"><div><label for="tx-n">Ad (ya da Ad Soyad)</label><select id="tx-n" onchange="txSet(\'n\',0,this.value)">'+opt(txNm)+'</select></div><div><label for="tx-s">Soyad (ayrı sütunsa)</label><select id="tx-s" onchange="txSet(\'s\',0,this.value)">'+opt(txSn)+'</select></div><div><label for="tx-t">Tarih (ölçüm / test günü)</label><select id="tx-t" onchange="txSet(\'t\',0,this.value)">'+opt(txDt)+'</select></div><div><label for="tx-p">Pozisyon</label><select id="tx-p" onchange="txSet(\'p\',0,this.value)">'+opt(txPs)+'</select></div><div><label for="tx-b">Doğum tarihi (ya da yılı)</label><select id="tx-b" onchange="txSet(\'b\',0,this.value)">'+opt(txBd)+'</select></div></div>';
     if(txDt<0)h+='<label for="tx-d">Dosyada tarih yok, tüm testler bu tarihe yazılsın</label><input id="tx-d" type="date" value="'+today()+'" onchange="render()">';
     h+='<p style="margin:14px 0 6px"><b>Sütun eşleştirme</b></p><div class="tw"><table class="tb" style="min-width:300px"><thead><tr><th>Excel sütunu</th><th>Test alanı</th></tr></thead><tbody>';
     hd.forEach(function(x,i){
@@ -2262,17 +2426,25 @@ function txPanel(){
       h+='<tr><td>'+col(i)+'</td><td><select aria-label="'+col(i)+' sütunu" onchange="txSet(\'m\','+i+',this.value)"><option value="">Kullanma</option>'+txFieldKeys().map(function(k){return '<option value="'+k+'"'+(txMap[i]===k?' selected':'')+'>'+esc(txFieldLabel(k))+'</option>'}).join('')+'</select></td></tr>';
     });
     h+='</tbody></table></div>';
-    var P=txPrep(),dup=0;
-    P.rows.forEach(function(x){if(db.records.some(function(r){return r.a===x.a.id&&r.d===x.d}))dup++;});
-    h+='<p style="margin:12px 0 6px">'+(P.newA.length?'<b>'+P.newA.length+'</b> yeni sporcu eklenecek, ':'')+(P.upA.length?'<b>'+P.upA.length+'</b> sporcunun pozisyon/doğum bilgisi güncellenecek, ':'')+'<b>'+P.rows.length+'</b> ölçüm/test satırı, '+P.vals+' değer eklenecek'+(dup?' ('+dup+' satır aynı gün kaydı olan sporcuya ait, değerler o kayda işlenir)':'')+'.</p>';
-    if(P.unk.length)h+='<p class="c-warn" style="margin:6px 0">Uygulamada bulunmayan isimler atlandı ('+P.unk.length+'): '+esc(P.unk.slice(0,8).join(', '))+(P.unk.length>8?'…':'')+'. Yukarıdan sporcu ekleme kutusunu işaretle ya da ismi düzelt.</p>';
-    var uk=P.newA.filter(function(x){return x.unkPos}).length;if(uk)h+='<p class="c-warn" style="margin:6px 0">'+uk+' sporcunun pozisyonu tanınmadı, "Orta saha" olarak eklenir; profilden düzeltebilirsin.</p>';
-    if(P.badv)h+='<p class="c-warn" style="margin:6px 0">'+P.badv+' anket değeri geçerli aralığın dışında olduğu için atlandı (RPE 0-10, yorgunluk ve kas ağrısı 1-5).</p>';
-    if(P.bad)h+='<p class="c-warn" style="margin:6px 0">'+P.bad+' satırın tarihi okunamadı, atlandı.</p>';
-    if(!txMap.some(function(k){return k})&&!P.newA.length&&!P.upA.length)h+='<p class="c-warn" style="margin:6px 0">Hiçbir test sütunu eşleşmedi. Yukarıdaki tabloda her sütun için test alanını seç.</p>';
-    h+='<div class="tw"><table class="tb" style="min-width:300px"><thead><tr><th>Sporcu</th><th>Tarih</th><th>Değer</th><th>VKİ</th></tr></thead><tbody>'+P.rows.slice(0,40).map(function(x){return '<tr><td>'+esc(x.a?x.a.n:x.nm)+(x.a?'':' <span class="c-ok">(yeni)</span>')+'</td><td>'+trDate(x.d)+'</td><td>'+x.n+'</td><td>'+(x.v.boy&&x.v.kilo?(x.v.kilo/Math.pow(x.v.boy/100,2)).toFixed(1):'-')+'</td></tr>'}).join('')+(P.rows.length>40?'<tr><td colspan="4" class="dim">… ve '+(P.rows.length-40)+' satır daha</td></tr>':'')+'</tbody></table></div>';
-    h+='<div class="row" style="margin-top:14px"><button class="btn"'+(P.rows.length||P.newA.length||P.upA.length?'':' disabled')+' onclick="txDo()">Verileri ekle</button><button class="btn ghost" onclick="txToggle()">Vazgeç</button></div>';
   }
+  h+='<label style="display:flex;gap:8px;align-items:center;margin-top:12px;color:var(--ink)"><input type="checkbox" id="tx-a"'+(txAdd?' checked':'')+' onchange="txAdd=this.checked;render()" style="width:auto"> Listede olup uygulamada olmayan sporcuları da ekle</label>';
+  var P=txPrep(),dup=0;
+  txAmbKeys=P.amb.map(function(a){return a.k});
+  P.rows.forEach(function(x){if(x.a&&db.records.some(function(r){return r.a===x.a.id&&r.d===x.d}))dup++;});
+  if(P.amb.length){
+    h+='<p class="c-warn" style="margin:12px 0 4px"><b>'+P.amb.length+' ismin hangi sporcu olduğu belirsiz.</b> Seç ya da atla:</p>'+P.amb.map(function(a,i){
+      return '<div class="row" style="margin:4px 0"><span style="min-width:110px"><b>'+esc(a.nm.trim())+'</b></span><select aria-label="'+esc(a.nm)+' kim" onchange="txAmbSet('+i+',this.value)"><option value="">Seç…</option>'+a.c.map(function(c){return '<option value="'+esc(cid(c))+'"'+(txAmb[a.k]===cid(c)?' selected':'')+'>'+esc(c.a?c.a.n:c.name)+'</option>'}).join('')+'<option value="skip"'+(txAmb[a.k]==='skip'?' selected':'')+'>Atla</option></select></div>';}).join('');
+  }
+  h+='<p style="margin:12px 0 6px">'+(P.newA.length?'<b>'+P.newA.length+'</b> yeni sporcu eklenecek, ':'')+(P.upA.length?'<b>'+P.upA.length+'</b> sporcunun pozisyon/doğum bilgisi güncellenecek, ':'')+'<b>'+P.rows.length+'</b> ölçüm/test satırı, '+P.vals+' değer eklenecek'+(dup?' ('+dup+' satır aynı gün kaydı olan sporcuya ait, değerler o kayda işlenir)':'')+'.</p>';
+  if(P.newA.length)h+='<p class="dim" style="margin:4px 0">Yeni sporcular: '+esc(P.newA.map(function(x){return x.n}).join(', '))+'</p>';
+  if(P.unk.length)h+='<p class="c-warn" style="margin:6px 0">Uygulamada bulunmayan isimler atlandı ('+P.unk.length+'): '+esc(P.unk.slice(0,8).join(', '))+(P.unk.length>8?'…':'')+'. Sporcu ekleme kutusunu işaretle ya da ismi düzelt.</p>';
+  if(P.newA.length&&!txRows&&!P.newA.some(function(x){return x.p!=='Orta saha'}))h+='<p class="dim" style="margin:4px 0">Bu dosyalarda pozisyon yok, yeni sporcular "Orta saha" olarak eklenir. Sonra Sporcular sayfasındaki "Pozisyonları düzenle" bölümünden ayarlayabilirsin.</p>';
+  var uk=P.newA.filter(function(x){return x.unkPos}).length;if(uk)h+='<p class="c-warn" style="margin:6px 0">'+uk+' sporcunun pozisyonu tanınmadı, "Orta saha" olarak eklenir.</p>';
+  if(P.badv)h+='<p class="c-warn" style="margin:6px 0">'+P.badv+' anket değeri geçerli aralığın dışında olduğu için atlandı (RPE 0-10, yorgunluk ve kas ağrısı 1-5).</p>';
+  if(P.bad)h+='<p class="c-warn" style="margin:6px 0">'+P.bad+' satırın tarihi okunamadı, atlandı.</p>';
+  if(txRows&&!txMap.some(function(k){return k})&&!P.newA.length&&!P.upA.length)h+='<p class="c-warn" style="margin:6px 0">Hiçbir test sütunu eşleşmedi. Yukarıdaki tabloda her sütun için test alanını seç.</p>';
+  h+='<div class="tw"><table class="tb" style="min-width:300px"><thead><tr><th>Sporcu</th><th>Tarih</th><th>Değer</th><th>VKİ</th></tr></thead><tbody>'+P.rows.slice(0,40).map(function(x){return '<tr><td>'+esc(x.nm)+(x.a?'':' <span class="c-ok">(yeni)</span>')+'</td><td>'+trDate(x.d)+'</td><td>'+x.n+'</td><td>'+(x.v.boy&&x.v.kilo?(x.v.kilo/Math.pow(x.v.boy/100,2)).toFixed(1):'-')+'</td></tr>'}).join('')+(P.rows.length>40?'<tr><td colspan="4" class="dim">… ve '+(P.rows.length-40)+' satır daha</td></tr>':'')+'</tbody></table></div>';
+  h+='<div class="row" style="margin-top:14px"><button class="btn"'+(P.rows.length||P.newA.length||P.upA.length?'':' disabled')+' onclick="txDo()">Verileri ekle</button><button class="btn ghost" onclick="txToggle()">Vazgeç</button></div>';
   return h+'</div>';
 }
 function txBlock(){
@@ -2282,8 +2454,36 @@ var _vaX2=vAthletes;
 vAthletes=function(){
   var h=_vaX2();if(ROLE!=='coach')return h;
   var K='<div class="row"><button class="btn ghost" onclick="go(\'entry\')">';
-  var b='<div class="row" style="margin-bottom:8px"><button class="btn ghost" onclick="txToggle()">'+(txOpen?'Excel aktarımını kapat':'Excel aktar')+'</button></div>'+(txOpen?txPanel():'');
+  var b='<div class="row" style="margin-bottom:8px"><button class="btn ghost" onclick="txToggle()">'+(txOpen?'Excel aktarımını kapat':'Excel aktar')+'</button>'+(db.athletes.length?'<button class="btn ghost" onclick="posToggle()">'+(posOpen?'Pozisyonları kapat':'Pozisyonları düzenle')+'</button>':'')+'</div>'+(txOpen?txPanel():'')+(posOpen&&db.athletes.length?posPanel():'');
   return h.indexOf(K)>-1?h.replace(K,b+K):h.replace('</p>','</p>'+b);
+};
+
+// ---- Sporcu bilgilerini düzenleme (ad, pozisyon, doğum tarihi)
+var posOpen=false;
+function editAth(id,f,v,nr){
+  var a=ath(id);if(!a)return;
+  if(f==='n'){v=String(v).replace(/\s+/g,' ').trim();if(!v){toast('Ad boş olamaz.');render();return;}a.n=v;}
+  else if(f==='p'){a.p=v;}
+  else if(f==='b'){if(!v)return;a.bd=v;a.y=parseInt(v.slice(0,4),10);}
+  save();if(!nr)render();toast('Kaydedildi');
+}
+function posToggle(){posOpen=!posOpen;render();}
+function posPanel(){
+  var l=db.athletes.slice().sort(byname);
+  return '<div class="form"><b>Pozisyonları düzenle</b><p class="dim" style="margin:6px 0">Her sporcunun pozisyonunu seç, değişiklik hemen kaydedilir.</p>'+l.map(function(a){
+    return '<div class="row" style="justify-content:space-between;border-bottom:1px solid var(--line);padding:6px 0"><span>'+esc(a.n)+'</span><select aria-label="'+esc(a.n)+' pozisyonu" onchange="editAth(\''+a.id+'\',\'p\',this.value,1)">'+POS.map(function(x){return '<option'+(x===a.p?' selected':'')+'>'+x+'</option>'}).join('')+'</select></div>';}).join('')+
+    '<div class="row" style="margin-top:12px"><button class="btn ghost" onclick="posToggle()">Kapat</button></div></div>';
+}
+function athEditBlock(a){
+  return '<details style="margin:14px 0"><summary>Bilgileri düzenle</summary><div class="form"><label for="ed-n">Ad Soyad</label><input id="ed-n" value="'+esc(a.n)+'" onchange="editAth(\''+a.id+'\',\'n\',this.value)"><label for="ed-p">Pozisyon</label><select id="ed-p" onchange="editAth(\''+a.id+'\',\'p\',this.value)">'+POS.map(function(x){return '<option'+(x===a.p?' selected':'')+'>'+x+'</option>'}).join('')+'</select><label for="ed-b">Doğum tarihi</label><input id="ed-b" type="date" value="'+esc(a.bd||'')+'" onchange="editAth(\''+a.id+'\',\'b\',this.value)"></div></details>';
+}
+var _vpE=vProfile;
+vProfile=function(){
+  var h=_vpE(),a=ath(selA);
+  if(view!=='profile'||!a||ROLE!=='coach')return h;
+  var K='<div class="row"><button class="btn" onclick="entryA=';
+  var i=h.indexOf(K);
+  return i>-1?h.slice(0,i)+athEditBlock(a)+h.slice(i):h+athEditBlock(a);
 };
 
 // ---- Uygulama olarak yükleme (PWA)
