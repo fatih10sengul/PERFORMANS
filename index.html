@@ -2643,6 +2643,8 @@ function vHiit(){
     h+='<h3 class="ct" style="margin-top:18px">Gruplar</h3>'+hiitGroups(L)+'<h3 class="ct" style="margin-top:18px">Sporcu planı</h3><div class="tw">'+hiitTable(L,false)+'</div>';
     h+='<div class="row" style="margin-top:12px"><button class="btn" onclick="hiitPdf()">PDF rapor</button><button class="btn ghost" onclick="hiitCsv()">Excel (CSV) indir</button></div>';
   }
+  var noS=L.filter(function(x){return x.asr==null});
+  if(noS.length)h+='<p class="dim" style="margin:12px 0 0">MSS değeri olmadığı için ASR hesaplanamayan: '+esc(noS.map(function(x){return x.a.n}).join(', '))+'</p>';
   if(miss.length)h+='<p class="dim" style="margin:12px 0 0">'+(c.method==='mas'?'MAS':'MSS ya da MAS')+' değeri eksik: '+esc(miss.map(function(a){var m=lastOn(a.id,'mas',hiitUp()),v=lastOn(a.id,'vmax',hiitUp());return a.n+' ('+(m?'MAS var '+trDate(m.d):'MAS yok')+', '+(v?'MSS var '+trDate(v.d):'MSS yok')+')'}).join('; '))+'</p>';
   h+='<div class="row" style="margin:18px 0 8px"><button class="btn ghost" onclick="hiitEdit=!hiitEdit;render()">'+(hiitEdit?'MAS / MSS girişini kapat':'MAS / MSS değerlerini gir')+'</button></div>';
   if(hiitEdit){
