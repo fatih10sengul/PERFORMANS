@@ -2643,7 +2643,7 @@ function vHiit(){
     h+='<h3 class="ct" style="margin-top:18px">Gruplar</h3>'+hiitGroups(L)+'<h3 class="ct" style="margin-top:18px">Sporcu planı</h3><div class="tw">'+hiitTable(L,false)+'</div>';
     h+='<div class="row" style="margin-top:12px"><button class="btn" onclick="hiitPdf()">PDF rapor</button><button class="btn ghost" onclick="hiitCsv()">Excel (CSV) indir</button></div>';
   }
-  if(miss.length)h+='<p class="dim" style="margin:12px 0 0">'+(c.method==='mas'?'MAS':'MSS ya da MAS')+' değeri eksik: '+esc(miss.map(function(a){return a.n}).join(', '))+'</p>';
+  if(miss.length)h+='<p class="dim" style="margin:12px 0 0">'+(c.method==='mas'?'MAS':'MSS ya da MAS')+' değeri eksik: '+esc(miss.map(function(a){var m=lastOn(a.id,'mas',hiitUp()),v=lastOn(a.id,'vmax',hiitUp());return a.n+' ('+(m?'MAS var '+trDate(m.d):'MAS yok')+', '+(v?'MSS var '+trDate(v.d):'MSS yok')+')'}).join('; '))+'</p>';
   h+='<div class="row" style="margin:18px 0 8px"><button class="btn ghost" onclick="hiitEdit=!hiitEdit;render()">'+(hiitEdit?'MAS / MSS girişini kapat':'MAS / MSS değerlerini gir')+'</button></div>';
   if(hiitEdit){
     h+='<div class="form"><b>MAS / MSS girişi</b><p class="dim" style="margin:6px 0">Testin yapıldığı tarihi yaz, sadece değiştirmek istediklerinin değerini gir. Boş bıraktıkların kaydedilmez. Her yeni test için farklı tarih yaz, eski testler silinmez; aynı tarihte aynı ölçüm varsa o tarihteki değer güncellenir.</p>'+
