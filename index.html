@@ -2897,6 +2897,15 @@ function pdfPlan(H,pageH,bk){
   return {f:f,pages:pages};
 }
 
+// GPS içe aktarmadan sonra ekran en yeni yüklenen güne geçsin
+var _doImpMc=doImport;
+doImport=function(){
+  var before={};db.gps.forEach(function(g){before[g.id]=1;});
+  _doImpMc.apply(this,arguments);
+  var mx='';db.gps.forEach(function(g){if(!before[g.id]&&g.d>mx)mx=g.d;});
+  if(mx){gpsDate=mx;render();}
+};
+
 // ---- Uygulama olarak yükleme (PWA)
 var DEFERRED=null;
 function isStandalone(){return (window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true;}
