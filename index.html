@@ -1807,7 +1807,7 @@ async function loadAll(){
 async function softRefresh(){
   if(!SBC||!ROLE||SYNC.busy||SYNC.dirty||document.hidden)return;
   try{
-    var names=ROLE==='coach'?['surveys','exercise_done','gps_sessions','test_records','permissions']:['surveys','exercise_done','program_days','program_exercises','permissions'];
+    var names=ROLE==='coach'?['surveys','exercise_done','gps_sessions','test_records','permissions']:['surveys','exercise_done','program_days','program_exercises','permissions','test_records'];
     var res=await Promise.all(names.map(function(n){return fetchAll(n)}));
     if(SYNC.busy||SYNC.dirty)return;
     var T={};names.forEach(function(n,i){T[n]=res[i];});
@@ -2944,6 +2944,27 @@ vTeam=function(){
   if(inj.length)x+='<p class="dim" style="margin:8px 0 0">Sakatlıkta olduğu için sıralamada yer almayan: '+esc(inj.join(', '))+'</p>';
   return h+x;
 };
+
+// Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
+var BUILD_ID=1792334795;
+async function checkUpdate(){
+  try{
+    if(document.hidden)return;
+    var r=await fetch('index.html?v='+Date.now(),{cache:'no-store'});if(!r.ok)return;
+    var t=await r.text(),m=t.match(/var BUILD_ID=(\d+);/);if(!m)return;
+    var nb=+m[1];if(nb<=BUILD_ID)return;
+    var last=0;try{last=+sessionStorage.getItem('pp_rl')||0;}catch(e){}
+    if(last>=nb)return;
+    if(SYNC.busy||SYNC.dirty)return;
+    var el=document.activeElement,tg=el&&el.tagName;
+    if(tg==='INPUT'||tg==='TEXTAREA'||tg==='SELECT')return;
+    try{sessionStorage.setItem('pp_rl',String(nb));}catch(e){}
+    location.reload();
+  }catch(e){}
+}
+setInterval(checkUpdate,90000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)setTimeout(checkUpdate,1500);});
+setTimeout(checkUpdate,5000);
 
 // ---- Uygulama olarak yükleme (PWA)
 var DEFERRED=null;
