@@ -2925,6 +2925,26 @@ series=function(aid,key){
   return out;
 };
 
+// Takım sıralamasında kaydı olmayan sporcuları listele
+var _vtMc=vTeam;
+vTeam=function(){
+  var h=_vtMc.apply(this,arguments);
+  if(typeof teamMode!=='undefined'&&teamMode!=='rank')return h;
+  var k=teamKey,miss=[],inj=[];
+  db.athletes.slice().sort(function(x,y){return x.n.localeCompare(y.n,'tr');}).forEach(function(a){
+    if(isInj(a)){inj.push(a.n);return;}
+    if(!series(a.id,k).length){
+      var why='';
+      if(k==='asr'){var m=lastOn(a.id,'mas','9999-12-31'),v=lastOn(a.id,'vmax','9999-12-31');why=' ('+(m?'':'MAS yok')+(!m&&!v?', ':'')+(v?'':'MSS yok')+')';}
+      miss.push(a.n+why);
+    }
+  });
+  var x='';
+  if(miss.length)x+='<p class="dim" style="margin:14px 0 0">Bu ölçümde kaydı olmayan '+miss.length+' sporcu: '+esc(miss.join('; '))+'</p>';
+  if(inj.length)x+='<p class="dim" style="margin:8px 0 0">Sakatlıkta olduğu için sıralamada yer almayan: '+esc(inj.join(', '))+'</p>';
+  return h+x;
+};
+
 // ---- Uygulama olarak yükleme (PWA)
 var DEFERRED=null;
 function isStandalone(){return (window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true;}
