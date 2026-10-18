@@ -2175,11 +2175,11 @@ M.hopAsym=['Tek bacak hop asimetrisi','%','low',1];
 (function(){
   function g(n){return T.filter(function(x){return x.n===n})[0];}
   var a=g('5-0-5 çeviklik');a.f.push(['agCtR','Sağ temas süresi','ms'],['agCtL','Sol temas süresi','ms']);a.m.push('agCtR','agCtL');
-  var b=g('Tek bacak hop');b.m.push('hopAsym');
-  g('Hop test').f.push(['hopRsi','Çift ayak RSI (hazır değer)','']);
+  ['Tek bacak hop','Hop test'].forEach(function(n){var i=T.indexOf(g(n));if(i>=0)T.splice(i,1);});
+  ['slR','slL','hopH','hopGct','hopRsi','slQR','slQL','hopAsym','slLsi'].forEach(function(k){delete TPL[k];delete TALT[k];});
   g('DJ').f.push(['djRsi','RSI (hazır değer)','']);
   T.push({n:'MAS (aerobik hız)',f:[['mas','MAS','km/sa']],m:['mas','asr']});TPL.mas='MAS (km/sa)';TALT.mas=['mas','maskmsa','aerobikhiz'];
-  TPL.agCtR='5-0-5 sağ temas (ms)';TPL.agCtL='5-0-5 sol temas (ms)';TPL.hopRsi='Çift ayak hop RSI';TPL.djRsi='DJ RSI';
+  TPL.agCtR='5-0-5 sağ temas (ms)';TPL.agCtL='5-0-5 sol temas (ms)';TPL.djRsi='DJ RSI';
   var d0=derive;derive=function(v){var o=d0(v);if(v.vmax&&v.mas)o.asr=v.vmax-v.mas;if(v.slR&&v.slL)o.hopAsym=Math.abs(v.slR-v.slL)/Math.max(v.slR,v.slL)*100;return o;};
 })();
 function fold(t){return String(t==null?'':t).toLocaleLowerCase('tr').replace(/ı/g,'i').replace(/ç/g,'c').replace(/ğ/g,'g').replace(/ö/g,'o').replace(/ş/g,'s').replace(/ü/g,'u').replace(/[^a-z0-9]/g,'');}
@@ -2240,7 +2240,7 @@ function rcTrials(rows){
     var f=fold(c);if(f)cur=f;
     if(typeof r1[i]!=='number'){if(f)cur=f;return;}
     var key='';
-    if(/hop/.test(cur)){key=/sag/.test(cur)?'slR':/sol/.test(cur)?'slL':/cift/.test(cur)?'hopRsi':'';}
+    if(/hop/.test(cur)){key='';}
     else if(cur==='sj')key='sjH';else if(cur==='cmj')key='cmjH';else if(/^dj/.test(cur))key='djRsi';
     if(key)cols.push({i:i,k:key});
   });
@@ -2946,7 +2946,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792335317;
+var BUILD_ID=1792336008;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -2966,17 +2966,17 @@ setInterval(checkUpdate,90000);
 document.addEventListener('visibilitychange',function(){if(!document.hidden)setTimeout(checkUpdate,1500);});
 setTimeout(checkUpdate,5000);
 
-// Eski "tek bacak hop RSI" değerlerini tek bacak hop sağ/sol alanlarına taşı
+// Hop testleri uygulamadan tamamen kaldırıldı: eski hop değerlerini kayıtlardan sil
+var HOPK=['slR','slL','hopH','hopGct','hopRsi','slQR','slQL','hopAsym','slLsi'];
 function migHop(){
   var ch=false;
   db.records.forEach(function(r){
     var v=r.v;if(!v)return;
-    if(v.slQR!=null||v.slQL!=null){
-      if(v.slQR!=null){if(v.slR==null)v.slR=v.slQR;delete v.slQR;}
-      if(v.slQL!=null){if(v.slL==null)v.slL=v.slQL;delete v.slQL;}
-      ch=true;
-    }
+    HOPK.forEach(function(k){if(k in v){delete v[k];ch=true;}});
   });
+  var n=db.records.length;
+  db.records=db.records.filter(function(r){return r.v&&Object.keys(r.v).length>0;});
+  if(db.records.length!==n)ch=true;
   return ch;
 }
 
