@@ -2690,6 +2690,7 @@ render=function(){
 // ---- Raporlarda test tarihleri
 function histTable(a,max,rep){
   var by={};db.records.filter(function(r){return r.a===a.id}).forEach(function(r){by[r.d]=Object.assign(by[r.d]||{},derive(r.v));});
+  series(a.id,'asr').forEach(function(p){if(by[p.d])by[p.d].asr=p.v;});
   var ds=Object.keys(by).sort().slice(-max);if(!ds.length)return '';
   var rows='';
   T.forEach(function(g){g.m.forEach(function(k){
