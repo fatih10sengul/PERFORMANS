@@ -2000,7 +2000,7 @@ async function boot(){
       showClaim();return;
     }
     await loadAll();
-    if(ROLE==='coach'){var _c1=collapseBody(),_c2=seedMatches(),_c3=seedProgram(),_c4=migHop();if(_c1||_c2||_c3||_c4)save();}
+    if(ROLE==='coach'){var _c1=collapseBody(),_c2=seedMatches(),_c3=seedProgram(),_c4=migHop(),_c5=seedHop();if(_c1||_c2||_c3||_c4||_c5)save();}
     if(ROLE==='athlete'){ME=db.athletes[0]?db.athletes[0].id:null;selA=ME;}
     authHide();chrome();
     view=ROLE==='athlete'?'me':'athletes';
@@ -2177,11 +2177,11 @@ M.hopAsym=['Tek bacak hop asimetrisi','%','low',1];
   var a=g('5-0-5 çeviklik');a.f.push(['agCtR','Sağ temas süresi','ms'],['agCtL','Sol temas süresi','ms']);a.m.push('agCtR','agCtL');
   ['Tek bacak hop','Hop test'].forEach(function(n){var i=T.indexOf(g(n));if(i>=0)T.splice(i,1);});
   ['hopH','hopGct','hopRsi','slQR','slQL','slLsi'].forEach(function(k){delete TPL[k];delete TALT[k];});
-  M.slR=['Tek bacak uzun atlama sağ','cm','high',0];M.slL=['Tek bacak uzun atlama sol','cm','high',0];M.hopD=['Çift ayak uzun atlama','cm','high',0];M.hopAsym=['Tek bacak uzun atlama asimetrisi','%','low',1];
-  TPL.slR='Tek bacak hop sağ (cm)';TPL.slL='Tek bacak hop sol (cm)';TPL.hopD='Çift ayak hop (cm)';
+  M.slR=['Tek bacak uzun atlama sağ','m','high',2];M.slL=['Tek bacak uzun atlama sol','m','high',2];M.hopD=['Çift ayak uzun atlama','m','high',2];M.hopAsym=['Tek bacak uzun atlama asimetrisi','%','low',1];
+  TPL.slR='Tek bacak hop sağ (m)';TPL.slL='Tek bacak hop sol (m)';TPL.hopD='Çift ayak hop (m)';
   TALT.slR=['hopsag','tekbacaksag','tekbacakhopsag'];TALT.slL=['hopsol','tekbacaksol','tekbacakhopsol'];TALT.hopD=['hopcift','ciftbacakhop','ciftayakhop','ciftbacak'];
-  T.push({n:'Tek bacak uzun atlama (hop)',f:[['slR','Sağ bacak','cm'],['slL','Sol bacak','cm']],m:['slR','slL','hopAsym']});
-  T.push({n:'Çift ayak uzun atlama (hop)',f:[['hopD','Mesafe','cm']],m:['hopD']});
+  T.push({n:'Tek bacak uzun atlama (hop)',f:[['slR','Sağ bacak','m'],['slL','Sol bacak','m']],m:['slR','slL','hopAsym']});
+  T.push({n:'Çift ayak uzun atlama (hop)',f:[['hopD','Mesafe','m']],m:['hopD']});
   g('DJ').f.push(['djRsi','RSI (hazır değer)','']);
   T.push({n:'MAS (aerobik hız)',f:[['mas','MAS','km/sa']],m:['mas','asr']});TPL.mas='MAS (km/sa)';TALT.mas=['mas','maskmsa','aerobikhiz'];
   TPL.agCtR='5-0-5 sağ temas (ms)';TPL.agCtL='5-0-5 sol temas (ms)';TPL.djRsi='DJ RSI';
@@ -2596,7 +2596,7 @@ vProfile=function(){
 };
 
 // ---- HIIT mesafe hesaplama (ASR tabanlı), tarih raporları ve yedek
-SETK.push('hiit');SETK.push('hopPurge');
+SETK.push('hiit');SETK.push('hopPurge');SETK.push('hopSeed');
 var HG=['-','Grup 1 – Dayanıklılık','Grup 2 – Hibrit','Grup 3 – Hız'],HGM=['-','Grup 1 – Düşük MAS','Grup 2 – Orta MAS','Grup 3 – Yüksek MAS'];
 function hiitMas(){return hiitCfg().method==='mas';}
 function HGN(g){return (hiitMas()?HGM:HG)[g];}
@@ -2951,7 +2951,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792336199;
+var BUILD_ID=1792336458;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -2984,6 +2984,25 @@ function migHop(){
   db.records=db.records.filter(function(r){return r.v&&Object.keys(r.v).length>0;});
   if(db.records.length!==n)ch=true;
   return ch;
+}
+
+// 25.08.2026 hop testi (tek bacak sağ/sol, çift ayak; her biri 2 deneme, en iyisi alınır). Sporcu adına göre yerleştirilir.
+var HOP_SEED=[["NAİM ALTUN", 2.03, 2.16, 2.15, 2.25, 2.22, 2.3], ["KAAN ŞAHİN", 1.87, 1.87, 1.99, 2, 2, 2.03], ["AHMET AKKAŞ", 1.9, 2.01, 1.87, 1.98, 2.27, 2.29], ["AHMET AKSOY", 2.17, 2.3, 2.14, 2.23, 2.11, 2.24], ["AHMET YASİR", 1.81, 1.91, 1.73, 1.92, 2.1, 2.21], ["ARDA ADA", 1.86, 1.91, 1.51, 1.68, 2.06, 2.16], ["ARDA YAKUP", 2.18, 2.3, 2.31, 2.24, 2.55, 2.75], ["CELAL AKKOYUN", 1.92, 1.97, 2, 1.98, 2.29, 2.42], ["EYMEN ACAR", 1.9, 2.02, 1.86, 1.97, 2.06, 2.06], ["HÜSEYİN DEMİR", 1.92, 2.07, 2.15, 2.26, 2.29, 2.39], ["İSMAİL MANAV", 1.9, 2.02, 2.11, 2.12, 2.23, 2.31], ["KADİR YAĞIZHAN", 2.2, 2.12, 1.86, 1.99, 2.15, 2.19], ["MELİH KURT", 1.88, 2.01, 1.85, 2.01, 2.26, 2.34], ["SAMET DÖNMEZER", 1.96, 2.05, 2, 2.05, 2.06, 2.13], ["YUSUF EFE", 2.01, 2.02, 1.9, 2.12, 2.12, 2.18], ["YUSUF İÇCAN", 2.17, 2.11, 2.13, 2.15, 2.37, 2.29], ["YUSUF KAYA", 2.16, 2.07, 1.32, 2.16, 2.37, 2.42], ["ALİ EREN", 2.08, 2.08, 2.05, 2.15, 2.21, 2.29], ["ERBAY", 2.01, 2.07, 2, 2.06, 2.31, 2.32]];
+function seedHop(){
+  if(db.hopSeed||!db.athletes.length)return false;
+  var un=[],n=0;
+  HOP_SEED.forEach(function(r){
+    var tk=nTok(r[0]),a=null;
+    db.athletes.some(function(x){if(nMatch(tk,nTok(x.n))){a=x;return true}return false;});
+    if(!a){un.push(r[0]);return;}
+    var v={slR:Math.max(r[1],r[2]),slL:Math.max(r[3],r[4]),hopD:Math.max(r[5],r[6])};
+    var ex=db.records.filter(function(q){return q.a===a.id&&q.d==='2026-08-25'})[0];
+    if(ex)Object.assign(ex.v,v);else db.records.push({id:uid(),a:a.id,d:'2026-08-25',v:v});
+    n++;
+  });
+  db.hopSeed={v:1,n:n,un:un};
+  setTimeout(function(){try{toast(n+' sporcunun hop test verisi yerleştirildi'+(un.length?'. Eşleşmeyen: '+un.join(', '):'.'));}catch(e){}},2500);
+  return true;
 }
 
 // ---- Uygulama olarak yükleme (PWA)
