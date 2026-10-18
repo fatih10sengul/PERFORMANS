@@ -2908,6 +2908,22 @@ doImport=function(){
   if(mx){gpsDate=mx;render();}
 };
 
+// ASR: MSS ve MAS farklı günlerde girilse bile her tarihte en son değerlerden hesaplanır
+var _serAsr=series;
+series=function(aid,key){
+  if(key!=='asr')return _serAsr(aid,key);
+  var rs=db.records.filter(function(r){return r.a===aid&&(r.v.mas!=null||r.v.vmax!=null);}).sort(function(x,y){return x.d<y.d?-1:x.d>y.d?1:0;});
+  var m=null,v=null,out=[];
+  rs.forEach(function(r){
+    if(r.v.mas!=null)m=r.v.mas;if(r.v.vmax!=null)v=r.v.vmax;
+    if(m!=null&&v!=null&&isFinite(v-m)){
+      var p={d:r.d,v:v-m};
+      if(out.length&&out[out.length-1].d===r.d)out[out.length-1]=p;else out.push(p);
+    }
+  });
+  return out;
+};
+
 // ---- Uygulama olarak yükleme (PWA)
 var DEFERRED=null;
 function isStandalone(){return (window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true;}
