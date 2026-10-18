@@ -2000,7 +2000,7 @@ async function boot(){
       showClaim();return;
     }
     await loadAll();
-    if(ROLE==='coach'){var _c1=collapseBody(),_c2=seedMatches(),_c3=seedProgram(),_c4=migHop(),_c5=seedHop(),_c6=seedJump(),_c7=seedJump2();if(_c1||_c2||_c3||_c4||_c5||_c6||_c7)save();}
+    if(ROLE==='coach'){var _c1=collapseBody(),_c2=seedMatches(),_c3=seedProgram(),_c4=migHop(),_c5=seedHop(),_c6=seedJump(),_c7=seedJump2(),_c8=seedJump3();if(_c1||_c2||_c3||_c4||_c5||_c6||_c7||_c8)save();}
     if(ROLE==='athlete'){ME=db.athletes[0]?db.athletes[0].id:null;selA=ME;}
     authHide();chrome();
     view=ROLE==='athlete'?'me':'athletes';
@@ -2596,7 +2596,7 @@ vProfile=function(){
 };
 
 // ---- HIIT mesafe hesaplama (ASR tabanlı), tarih raporları ve yedek
-SETK.push('hiit');SETK.push('hopPurge');SETK.push('hopSeed');SETK.push('jumpSeed');SETK.push('jumpSeed2');
+SETK.push('hiit');SETK.push('hopPurge');SETK.push('hopSeed');SETK.push('jumpSeed');SETK.push('jumpSeed2');SETK.push('jumpSeed3');
 var HG=['-','Grup 1 – Dayanıklılık','Grup 2 – Hibrit','Grup 3 – Hız'],HGM=['-','Grup 1 – Düşük MAS','Grup 2 – Orta MAS','Grup 3 – Yüksek MAS'];
 function hiitMas(){return hiitCfg().method==='mas';}
 function HGN(g){return (hiitMas()?HGM:HG)[g];}
@@ -2951,7 +2951,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792338972;
+var BUILD_ID=1792339283;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3059,6 +3059,46 @@ function seedJump2(){
     n++;
   });
   db.jumpSeed2={v:1,n:n,un:un};
+  return true;
+}
+
+// MyJump Lab tüm tarihler (25.08, 29.08, 18.09, 21.09, 10.10, 18.10): yalnızca eksik değerleri doldurur.
+// [ad, tarih, CMJ cm, SJ cm, [DJ sıçrama cm, DJ temas ms, kutu cm, MyJump RSI]]
+var JUMP3=[["AKKAŞ", "2026-08-25", 53.0, 51.16, [31, 250, 45, 2.0]], ["Ada", "2026-08-25", 33.77, 30.46, [26, 208, 45, 2.2]], ["Ada", "2026-08-29", null, null, [42, 250, 45, 2.33]], ["Ada", "2026-10-10", 31.14, null, null], ["Ahmet Aksoy", "2026-08-25", 45.18, 46.5, [42, 292, 45, 2.0]], ["Ahmet Aksoy", "2026-10-10", 53.61, null, null], ["Ahmet Yasir", "2026-08-25", 44.72, 42.26, [36, 333, 45, 1.63]], ["Ahmet Yasir", "2026-10-10", 43.92, null, null], ["Ali Eren", "2026-08-25", 56.51, 37.48, [36, 208, 45, 2.6]], ["Ali Eren", "2026-10-10", 41.63, null, null], ["Arda Yakup", "2026-08-25", 55.35, 47.58, [36, 250, 45, 2.17]], ["Batu", "2026-09-18", 45.75, null, null], ["Batu", "2026-09-21", null, null, [42, 250, 47, 2.33]], ["Batu", "2026-10-10", 47.58, null, null], ["Celal", "2026-08-25", 46.59, 35.81, [36, 292, 45, 1.86]], ["Celal", "2026-10-10", 43.86, null, null], ["Deniz", "2026-09-18", 56.89, null, null], ["Deniz", "2026-09-21", null, null, [48, 292, 47, 2.14]], ["Deniz", "2026-10-10", 55.75, null, null], ["Deniz", "2026-10-18", null, null, [48, 292, 47, 2.14]], ["ERBAY", "2026-08-25", 46.54, 39.87, [48, 292, 45, 2.14]], ["ERBAY", "2026-10-10", 45.2, null, null], ["Ege Bilge", "2026-08-25", 39.44, 35.95, [36, 375, 45, 1.44]], ["Hüseyin", "2026-08-25", 40.15, 35.53, [26, 208, 45, 2.2]], ["Hüseyin", "2026-10-10", 40.4, null, null], ["KADİR", "2026-08-25", 54.7, 51.33, [48, 250, 45, 2.5]], ["KADİR", "2026-10-10", 60.62, null, null], ["MELIH", "2026-08-25", 41.84, 34.3, [31, 167, 45, 3.0]], ["MELIH", "2026-10-10", 40.71, null, null], ["Naim", "2026-08-25", 48.36, 40.49, [42, 417, 45, 1.4]], ["Naim", "2026-10-10", 47.68, null, null], ["Ramazan Tuna Ünay", "2026-10-10", 43.65, null, null], ["Samet", "2026-08-25", 46.64, 47.76, [36, 250, 45, 2.17]], ["Samet", "2026-10-10", 47.65, null, null], ["Yusuf Efe", "2026-08-25", 44.52, 46.12, [42, 292, 45, 2.0]], ["Yusuf Efe", "2026-10-10", 42.25, null, null], ["Yusuf Kaya", "2026-08-25", 51.97, 42.2, [36, 250, 45, 2.17]], ["Yusuf Kaya", "2026-10-10", 50.69, null, null], ["Yusuf İçcan", "2026-08-25", 42.25, 36.26, [36, 250, 45, 2.17]], ["Yusuf İçcan", "2026-10-10", 42.6, null, null], ["Ömer Faruk", "2026-09-18", 58.21, null, null], ["Ömer Faruk", "2026-09-21", null, null, [42, 250, 47, 2.33]], ["Ömer Faruk", "2026-10-10", 47.71, null, null], ["İsmail", "2026-08-25", 47.68, 43.32, [42, 208, 45, 2.8]], ["İsmail", "2026-08-29", null, null, [36, 208, 45, 2.6]], ["İsmail", "2026-10-10", 48.06, null, null]];
+function seedJump3(){
+  if(db.jumpSeed3||!db.athletes.length)return false;
+  var un={},amb={},filled=0,ath={},ds=function(d,k){var t=new Date(d+'T12:00:00');t.setDate(t.getDate()+k);return t.toISOString().slice(0,10);};
+  JUMP3.forEach(function(r){
+    var tk=nTok(r[0]),hit=db.athletes.filter(function(x){return nMatch(tk,nTok(x.n))});
+    if(!hit.length){un[r[0]]=1;return;}
+    if(hit.length>1){amb[r[0]]=1;return;}
+    var a=hit[0],lo=ds(r[1],-2),hi=ds(r[1],2);
+    var has=function(k){return db.records.some(function(q){return q.a===a.id&&q.d>=lo&&q.d<=hi&&q.v&&q.v[k]!=null})};
+    var add={};
+    if(r[2]!=null&&!has('cmjH'))add.cmjH=r[2];
+    if(r[3]!=null&&!has('sjH'))add.sjH=r[3];
+    if(r[4]){
+      if(!has('djH'))add.djH=r[4][0];
+      if(!has('djGct'))add.djGct=r[4][1];
+      if(!has('djD'))add.djD=r[4][2];
+      if(!has('djRsi'))add.djRsi=r[4][3];
+    }
+    var ks=Object.keys(add);if(!ks.length)return;
+    var ex=db.records.filter(function(q){return q.a===a.id&&q.d===r[1]})[0];
+    if(ex)Object.assign(ex.v,add);else db.records.push({id:uid(),a:a.id,d:r[1],v:add});
+    filled+=ks.length;ath[a.id]=1;
+  });
+  // 25.08 için daha önce yazılan hatalı RSI değerlerini (eski dosya) düzelt
+  RSI_SEED.forEach(function(o){
+    var nw=null;JUMP3.forEach(function(r){if(r[0]===o[0]&&r[1]==='2026-08-25'&&r[4])nw=r[4][3];});
+    if(nw==null||nw===o[1])return;
+    var tk=nTok(o[0]),hit=db.athletes.filter(function(x){return nMatch(tk,nTok(x.n))});
+    if(hit.length!==1)return;
+    db.records.forEach(function(q){if(q.a===hit[0].id&&q.d==='2026-08-25'&&q.v&&q.v.djRsi===o[1]){q.v.djRsi=nw;filled++;}});
+  });
+  var u=Object.keys(un).concat(Object.keys(amb));
+  db.jumpSeed3={v:1,n:filled,un:Object.keys(un),amb:Object.keys(amb)};
+  setTimeout(function(){try{toast('MyJump verisi: '+Object.keys(ath).length+' sporcuya '+filled+' eksik değer eklendi'+(u.length?'. Eşleşmeyen: '+u.join(', '):'.'));}catch(e){}},7000);
   return true;
 }
 
