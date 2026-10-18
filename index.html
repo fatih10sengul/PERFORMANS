@@ -2000,7 +2000,7 @@ async function boot(){
       showClaim();return;
     }
     await loadAll();
-    if(ROLE==='coach'){var _c1=collapseBody(),_c2=seedMatches(),_c3=seedProgram(),_c4=migHop(),_c5=seedHop(),_c6=seedJump(),_c7=seedJump2(),_c8=seedJump3();if(_c1||_c2||_c3||_c4||_c5||_c6||_c7||_c8)save();}
+    if(ROLE==='coach'){var _c1=collapseBody(),_c2=seedMatches(),_c3=seedProgram(),_c4=migHop(),_c5=seedHop(),_c6=seedJump(),_c7=seedJump2(),_c8=seedJump3(),_c9=seedMas();if(_c1||_c2||_c3||_c4||_c5||_c6||_c7||_c8||_c9)save();}
     if(ROLE==='athlete'){ME=db.athletes[0]?db.athletes[0].id:null;selA=ME;}
     authHide();chrome();
     view=ROLE==='athlete'?'me':'athletes';
@@ -2596,7 +2596,7 @@ vProfile=function(){
 };
 
 // ---- HIIT mesafe hesaplama (ASR tabanlı), tarih raporları ve yedek
-SETK.push('hiit');SETK.push('hopPurge');SETK.push('hopSeed');SETK.push('jumpSeed');SETK.push('jumpSeed2');SETK.push('jumpSeed3');
+SETK.push('hiit');SETK.push('hopPurge');SETK.push('hopSeed');SETK.push('jumpSeed');SETK.push('jumpSeed2');SETK.push('jumpSeed3');SETK.push('masSeed');
 var HG=['-','Grup 1 – Dayanıklılık','Grup 2 – Hibrit','Grup 3 – Hız'],HGM=['-','Grup 1 – Düşük MAS','Grup 2 – Orta MAS','Grup 3 – Yüksek MAS'];
 function hiitMas(){return hiitCfg().method==='mas';}
 function HGN(g){return (hiitMas()?HGM:HG)[g];}
@@ -2961,7 +2961,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792340345;
+var BUILD_ID=1792340877;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3109,6 +3109,25 @@ function seedJump3(){
   var u=Object.keys(un).concat(Object.keys(amb));
   db.jumpSeed3={v:1,n:filled,un:Object.keys(un),amb:Object.keys(amb)};
   setTimeout(function(){try{toast('MyJump verisi: '+Object.keys(ath).length+' sporcuya '+filled+' eksik değer eklendi'+(u.length?'. Eşleşmeyen: '+u.join(', '):'.'));}catch(e){}},7000);
+  return true;
+}
+
+// Eski MAS değerleri (U19_ASR_HIIT_Hesaplama.xlsx), 01.08.2026 tarihiyle. Aynı dönemde zaten MAS varsa dokunmaz.
+var MAS_SEED=[["AHMET AKKAŞ", 19], ["AHMET AKSOY", 19], ["AHMET YASİR ÖZDEMİR", 20.5], ["ARDA ADA ÖZKAN", 19.5], ["ARDA YAKUP YILMAZ", 19.5], ["BATU", 18.5], ["CELAL AKKOYUN", 19.5], ["DENİZ EMRE EREN", 20], ["HÜSEYİN DEMİR", 21.5], ["İSMAİL MANAV", 21], ["KADİR YAĞIZHAN", 19.5], ["MELİH KURT", 21], ["NAİM ALTUN", 20], ["ÖMER FARUK", 19.5], ["SAMET DÖNMEZER", 20.5], ["YUSUF EFE", 21.5], ["YUSUF İÇCAN", 18.5], ["YUSUF KAYA", 21]];
+function seedMas(){
+  if(db.masSeed||!db.athletes.length)return false;
+  var un=[],n=0;
+  MAS_SEED.forEach(function(r){
+    var tk=nTok(r[0]),hit=db.athletes.filter(function(x){return nMatch(tk,nTok(x.n))});
+    if(hit.length!==1){un.push(r[0]);return;}
+    var a=hit[0];
+    if(db.records.some(function(q){return q.a===a.id&&q.d>='2026-07-25'&&q.d<='2026-08-08'&&q.v&&q.v.mas!=null}))return;
+    var ex=db.records.filter(function(q){return q.a===a.id&&q.d==='2026-08-01'})[0];
+    if(ex)ex.v.mas=r[1];else db.records.push({id:uid(),a:a.id,d:'2026-08-01',v:{mas:r[1]}});
+    n++;
+  });
+  db.masSeed={v:1,n:n,un:un};
+  setTimeout(function(){try{toast('Eski MAS değerleri (01.08.2026): '+n+' sporcu'+(un.length?'. Eşleşmeyen: '+un.join(', '):'.'));}catch(e){}},9000);
   return true;
 }
 
