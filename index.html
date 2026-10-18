@@ -2000,7 +2000,7 @@ async function boot(){
       showClaim();return;
     }
     await loadAll();
-    if(ROLE==='coach'){var _c1=collapseBody(),_c2=seedMatches(),_c3=seedProgram(),_c4=migHop(),_c5=seedHop(),_c6=seedJump();if(_c1||_c2||_c3||_c4||_c5||_c6)save();}
+    if(ROLE==='coach'){var _c1=collapseBody(),_c2=seedMatches(),_c3=seedProgram(),_c4=migHop(),_c5=seedHop(),_c6=seedJump(),_c7=seedJump2();if(_c1||_c2||_c3||_c4||_c5||_c6||_c7)save();}
     if(ROLE==='athlete'){ME=db.athletes[0]?db.athletes[0].id:null;selA=ME;}
     authHide();chrome();
     view=ROLE==='athlete'?'me':'athletes';
@@ -2596,7 +2596,7 @@ vProfile=function(){
 };
 
 // ---- HIIT mesafe hesaplama (ASR tabanlı), tarih raporları ve yedek
-SETK.push('hiit');SETK.push('hopPurge');SETK.push('hopSeed');SETK.push('jumpSeed');
+SETK.push('hiit');SETK.push('hopPurge');SETK.push('hopSeed');SETK.push('jumpSeed');SETK.push('jumpSeed2');
 var HG=['-','Grup 1 – Dayanıklılık','Grup 2 – Hibrit','Grup 3 – Hız'],HGM=['-','Grup 1 – Düşük MAS','Grup 2 – Orta MAS','Grup 3 – Yüksek MAS'];
 function hiitMas(){return hiitCfg().method==='mas';}
 function HGN(g){return (hiitMas()?HGM:HG)[g];}
@@ -2951,7 +2951,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792338119;
+var BUILD_ID=1792338812;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3031,6 +3031,34 @@ function seedJump(){
   });
   db.jumpSeed={v:1,n:filled,un:un,amb:amb};
   setTimeout(function(){try{toast('Eksik CMJ/SJ/DJ verisi dolduruldu: '+ath+' sporcu, '+filled+' değer'+(un.length||amb.length?'. Eşleşmeyen: '+un.concat(amb).join(', '):'.'));}catch(e){}},5000);
+  return true;
+}
+
+// DJ RSI MyJump Lab ile aynı hesaplanır: uçuş süresi / yer temas süresi (uçuş süresi sıçrama yüksekliğinden bulunur).
+// Elle girilmiş hazır RSI değeri varsa o kullanılır.
+var _dRsiMc=derive;
+derive=function(v){
+  var o=_dRsiMc(v);
+  if(v.djRsi!=null&&isFinite(v.djRsi))o.djRsi=v.djRsi;
+  else if(v.djH&&v.djGct)o.djRsi=2*Math.sqrt(2*(v.djH/100)/9.81)/(v.djGct/1000);
+  return o;
+};
+
+// DJ RSI: MyJump Lab'ın kendi hesapladığı değer (eksik olanlara, 25.08.2026)
+var RSI_SEED=[["AKKAŞ", 2.0], ["Ada", 2.2], ["Ahmet Aksoy", 2.0], ["Ahmet Yasir", 1.63], ["Ali Eren", 2.6], ["Arda Yakup", 2.17], ["Celal", 1.86], ["ERBAY", 2.14], ["Ege Bilge", 1.44], ["Eymen Acar", 1.71], ["Hüseyin", 2.2], ["KADİR", 2.5], ["Kaan", 1.5], ["MELIH", 2.0], ["Naim", 1.4], ["Peter", 1.44], ["Samet", 2.17], ["Yusuf Efe", 2.0], ["Yusuf Kaya", 2.17], ["Yusuf İçcan", 2.17], ["İsmail", 2.17]];
+function seedJump2(){
+  if(db.jumpSeed2||!db.athletes.length)return false;
+  var un=[],n=0;
+  RSI_SEED.forEach(function(r){
+    var tk=nTok(r[0]),hit=db.athletes.filter(function(x){return nMatch(tk,nTok(x.n))});
+    if(hit.length!==1){un.push(r[0]);return;}
+    var a=hit[0];
+    if(db.records.some(function(q){return q.a===a.id&&q.d>='2026-08-20'&&q.d<='2026-08-31'&&q.v&&q.v.djRsi!=null}))return;
+    var ex=db.records.filter(function(q){return q.a===a.id&&q.d==='2026-08-25'})[0];
+    if(ex)ex.v.djRsi=r[1];else db.records.push({id:uid(),a:a.id,d:'2026-08-25',v:{djRsi:r[1]}});
+    n++;
+  });
+  db.jumpSeed2={v:1,n:n,un:un};
   return true;
 }
 
