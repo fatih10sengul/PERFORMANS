@@ -2176,7 +2176,12 @@ M.hopAsym=['Tek bacak hop asimetrisi','%','low',1];
   function g(n){return T.filter(function(x){return x.n===n})[0];}
   var a=g('5-0-5 çeviklik');a.f.push(['agCtR','Sağ temas süresi','ms'],['agCtL','Sol temas süresi','ms']);a.m.push('agCtR','agCtL');
   ['Tek bacak hop','Hop test'].forEach(function(n){var i=T.indexOf(g(n));if(i>=0)T.splice(i,1);});
-  ['slR','slL','hopH','hopGct','hopRsi','slQR','slQL','hopAsym','slLsi'].forEach(function(k){delete TPL[k];delete TALT[k];});
+  ['hopH','hopGct','hopRsi','slQR','slQL','slLsi'].forEach(function(k){delete TPL[k];delete TALT[k];});
+  M.slR=['Tek bacak uzun atlama sağ','cm','high',0];M.slL=['Tek bacak uzun atlama sol','cm','high',0];M.hopD=['Çift ayak uzun atlama','cm','high',0];M.hopAsym=['Tek bacak uzun atlama asimetrisi','%','low',1];
+  TPL.slR='Tek bacak hop sağ (cm)';TPL.slL='Tek bacak hop sol (cm)';TPL.hopD='Çift ayak hop (cm)';
+  TALT.slR=['hopsag','tekbacaksag','tekbacakhopsag'];TALT.slL=['hopsol','tekbacaksol','tekbacakhopsol'];TALT.hopD=['hopcift','ciftbacakhop','ciftayakhop','ciftbacak'];
+  T.push({n:'Tek bacak uzun atlama (hop)',f:[['slR','Sağ bacak','cm'],['slL','Sol bacak','cm']],m:['slR','slL','hopAsym']});
+  T.push({n:'Çift ayak uzun atlama (hop)',f:[['hopD','Mesafe','cm']],m:['hopD']});
   g('DJ').f.push(['djRsi','RSI (hazır değer)','']);
   T.push({n:'MAS (aerobik hız)',f:[['mas','MAS','km/sa']],m:['mas','asr']});TPL.mas='MAS (km/sa)';TALT.mas=['mas','maskmsa','aerobikhiz'];
   TPL.agCtR='5-0-5 sağ temas (ms)';TPL.agCtL='5-0-5 sol temas (ms)';TPL.djRsi='DJ RSI';
@@ -2240,7 +2245,7 @@ function rcTrials(rows){
     var f=fold(c);if(f)cur=f;
     if(typeof r1[i]!=='number'){if(f)cur=f;return;}
     var key='';
-    if(/hop/.test(cur)){key='';}
+    if(/hop/.test(cur)){key=/sag/.test(cur)?'slR':/sol/.test(cur)?'slL':/cift/.test(cur)?'hopD':'';}
     else if(cur==='sj')key='sjH';else if(cur==='cmj')key='cmjH';else if(/^dj/.test(cur))key='djRsi';
     if(key)cols.push({i:i,k:key});
   });
@@ -2591,7 +2596,7 @@ vProfile=function(){
 };
 
 // ---- HIIT mesafe hesaplama (ASR tabanlı), tarih raporları ve yedek
-SETK.push('hiit');
+SETK.push('hiit');SETK.push('hopPurge');
 var HG=['-','Grup 1 – Dayanıklılık','Grup 2 – Hibrit','Grup 3 – Hız'],HGM=['-','Grup 1 – Düşük MAS','Grup 2 – Orta MAS','Grup 3 – Yüksek MAS'];
 function hiitMas(){return hiitCfg().method==='mas';}
 function HGN(g){return (hiitMas()?HGM:HG)[g];}
@@ -2946,7 +2951,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792336008;
+var BUILD_ID=1792336199;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -2969,7 +2974,8 @@ setTimeout(checkUpdate,5000);
 // Hop testleri uygulamadan tamamen kaldırıldı: eski hop değerlerini kayıtlardan sil
 var HOPK=['slR','slL','hopH','hopGct','hopRsi','slQR','slQL','hopAsym','slLsi'];
 function migHop(){
-  var ch=false;
+  if(db.hopPurge)return false;
+  var ch=true;db.hopPurge=1;
   db.records.forEach(function(r){
     var v=r.v;if(!v)return;
     HOPK.forEach(function(k){if(k in v){delete v[k];ch=true;}});
