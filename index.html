@@ -1021,7 +1021,7 @@ function vPrev(){
     body=dayTabs(prevDay,'setPV')+(dd&&dd.title?'<p class="dim" style="margin:0 0 6px">'+esc(dd.title)+'</p>':'')+(ex.length?ex.map(function(e){return '<div class="rank"><div class="top"><label class="chk" style="margin:0"><input type="checkbox" '+(DN()[a.id+'|'+dt+'|'+e.id]?'checked':'')+' onchange="toggleDone(\''+a.id+'\',\''+dt+'\',\''+e.id+'\')"><span>'+esc(e.n)+'</span></label>'+vidLink(e)+'</div><div class="dim" style="margin-left:32px">'+((e.sets?esc(e.sets)+(e.reps?' x ':''):'')+(e.reps?esc(e.reps):(e.sets?'':'-')))+(e.note?', '+esc(e.note):'')+'</div></div>'}).join('')+'<p class="dim" style="margin:8px 0 0">'+dn+' / '+ex.length+' tamamlandı</p>':'<p class="dim">'+DF[prevDay]+' için program yok.</p>');
     h+=sec('Programım ('+DF[prevDay]+')',body);}
   if(p.survey){any=true;h+=sec('Günlük anket',surveyForm(a));}
-  if(p.tests){any=true;var rows='';T.forEach(function(g){g.m.forEach(function(k){if(typeof hideK==='function'&&hideK(k))return;var sr=series(a.id,k);if(!sr.length)return;var l=sr[sr.length-1];rows+='<div class="m" style="grid-template-columns:1fr auto"><div class="l">'+M[k][0]+'<br><span class="dim">'+trDate(l.d)+'</span></div><div class="v"><span class="num" style="font-size:26px">'+fmt(k,l.v)+'</span><small>'+M[k][1]+'</small></div></div>'});});h+=sec('Testlerim',rows||'<p class="dim">Henüz test sonucu yok.</p>');}
+  if(p.tests){any=true;var rows='';T.forEach(function(g){g.m.forEach(function(k){if(typeof hideK==='function'&&hideK(k))return;var sr=series(a.id,k);if(!sr.length)return;var l=sr[sr.length-1];rows+='<div class="m" style="grid-template-columns:1fr auto"><div class="l">'+M[k][0]+'<br><span class="dim">'+trDate(l.d)+'</span></div><div class="v"><span class="num" style="font-size:26px">'+fmt(k,l.v)+'</span><small>'+M[k][1]+'</small></div></div>'});});h+=sec('Testlerim',(rows||'<p class="dim">Henüz test sonucu yok.</p>')+(typeof histTable==='function'?histTable(a,80,false,true):''));}
   if(p.gps){any=true;var lg2=db.gps.filter(function(g){return g.a===a.id}).sort(function(x,y){return x.d<y.d?1:-1}),l7=lg2.filter(function(g){return dnum(g.d)>dnum(today())-7&&g.td!=null}).reduce(function(x,g){return x+g.td},0);
     h+=sec('GPS özetim',lg2.length?'<p style="margin:6px 0">Son 7 günde Total Distance: <b>'+n0(l7)+' m</b></p>'+gtab(lg2.slice(0,3)):'<p class="dim">Henüz GPS verisi yok.</p>');}
   if(p.load){any=true;var e1=ewma(a.id,'td');h+=sec('Yük ve risk',e1&&e1.r!=null?'<div class="m" style="grid-template-columns:1fr auto"><div class="l">ACWR (Total Distance)<br><span class="chip '+band(e1)[1]+'">'+band(e1)[0]+'</span></div><div class="v"><span class="num">'+e1.r.toFixed(2)+'</span></div></div>':'<p class="dim">Henüz yük verisi yok.</p>');}
@@ -2693,12 +2693,12 @@ render=function(){
 };
 
 // ---- Raporlarda test tarihleri
-function histTable(a,max,rep){
+function histTable(a,max,rep,filt){
   if(!rep){
     var bd={};db.records.filter(function(r){return r.a===a.id}).forEach(function(r){bd[r.d]=Object.assign(bd[r.d]||{},derive(r.v));});
     series(a.id,'asr').forEach(function(p){if(bd[p.d])bd[p.d].asr=p.v;});
     var dd=Object.keys(bd).sort().reverse().slice(0,max);if(!dd.length)return '';
-    var cols=[];T.forEach(function(g){g.m.forEach(function(k){if(cols.indexOf(k)<0&&dd.some(function(d){return bd[d][k]!=null}))cols.push(k);});});
+    var cols=[];T.forEach(function(g){g.m.forEach(function(k){if(cols.indexOf(k)<0&&!(filt&&hideK(k))&&dd.some(function(d){return bd[d][k]!=null}))cols.push(k);});});
     if(!cols.length)return '';
     var th='<tr><th style="position:sticky;left:0;background:var(--bg);z-index:1">Tarih</th>'+cols.map(function(k){return '<th style="white-space:nowrap">'+M[k][0]+(M[k][1]?'<br><span class="dim">'+M[k][1]+'</span>':'')+'</th>'}).join('')+'</tr>';
     var tr=dd.map(function(d){return '<tr><td style="position:sticky;left:0;background:var(--bg);white-space:nowrap">'+trDate(d)+'</td>'+cols.map(function(k){return '<td>'+(bd[d][k]!=null?fmt(k,bd[d][k]):'-')+'</td>'}).join('')+'</tr>'}).join('');
@@ -2961,7 +2961,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792340174;
+var BUILD_ID=1792340345;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
