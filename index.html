@@ -2182,7 +2182,7 @@ M.hopAsym=['Tek bacak hop asimetrisi','%','low',1];
   TALT.slR=['hopsag','tekbacaksag','tekbacakhopsag'];TALT.slL=['hopsol','tekbacaksol','tekbacakhopsol'];TALT.hopD=['hopcift','ciftbacakhop','ciftayakhop','ciftbacak'];
   T.push({n:'Tek bacak uzun atlama (hop)',f:[['slR','Sağ bacak','m'],['slL','Sol bacak','m']],m:['slR','slL','hopAsym']});
   T.push({n:'Çift ayak uzun atlama (hop)',f:[['hopD','Mesafe','m']],m:['hopD']});
-  g('DJ').f.push(['djRsi','RSI (hazır değer)','']);
+  g('DJ').f.push(['djRsi','RSI (MyJump değeri, boşsa otomatik)','']);
   T.push({n:'MAS (aerobik hız)',f:[['mas','MAS','km/sa']],m:['mas','asr']});TPL.mas='MAS (km/sa)';TALT.mas=['mas','maskmsa','aerobikhiz'];
   TPL.agCtR='5-0-5 sağ temas (ms)';TPL.agCtL='5-0-5 sol temas (ms)';TPL.djRsi='DJ RSI';
   var d0=derive;derive=function(v){var o=d0(v);if(v.vmax&&v.mas)o.asr=v.vmax-v.mas;if(v.slR&&v.slL)o.hopAsym=Math.abs(v.slR-v.slL)/Math.max(v.slR,v.slL)*100;return o;};
@@ -2951,7 +2951,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792338812;
+var BUILD_ID=1792338972;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
