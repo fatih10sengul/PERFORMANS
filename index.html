@@ -2694,6 +2694,16 @@ render=function(){
 
 // ---- Raporlarda test tarihleri
 function histTable(a,max,rep){
+  if(!rep){
+    var bd={};db.records.filter(function(r){return r.a===a.id}).forEach(function(r){bd[r.d]=Object.assign(bd[r.d]||{},derive(r.v));});
+    series(a.id,'asr').forEach(function(p){if(bd[p.d])bd[p.d].asr=p.v;});
+    var dd=Object.keys(bd).sort().reverse().slice(0,max);if(!dd.length)return '';
+    var cols=[];T.forEach(function(g){g.m.forEach(function(k){if(cols.indexOf(k)<0&&dd.some(function(d){return bd[d][k]!=null}))cols.push(k);});});
+    if(!cols.length)return '';
+    var th='<tr><th style="position:sticky;left:0;background:var(--bg);z-index:1">Tarih</th>'+cols.map(function(k){return '<th style="white-space:nowrap">'+M[k][0]+(M[k][1]?'<br><span class="dim">'+M[k][1]+'</span>':'')+'</th>'}).join('')+'</tr>';
+    var tr=dd.map(function(d){return '<tr><td style="position:sticky;left:0;background:var(--bg);white-space:nowrap">'+trDate(d)+'</td>'+cols.map(function(k){return '<td>'+(bd[d][k]!=null?fmt(k,bd[d][k]):'-')+'</td>'}).join('')+'</tr>'}).join('');
+    return '<h3 class="ct" style="margin-top:18px">Test geçmişi</h3><div class="tw"><table class="tb" style="min-width:'+(110+cols.length*84)+'px"><thead>'+th+'</thead><tbody>'+tr+'</tbody></table></div><p class="dim" style="margin:4px 0 0">Her satır bir test günü, en yenisi üstte. Yeni veri girdikçe satır eklenir, eskiler silinmez. Tabloyu sağa kaydırarak tüm testleri görebilirsin.</p>';
+  }
   var by={};db.records.filter(function(r){return r.a===a.id}).forEach(function(r){by[r.d]=Object.assign(by[r.d]||{},derive(r.v));});
   series(a.id,'asr').forEach(function(p){if(by[p.d])by[p.d].asr=p.v;});
   var ds=Object.keys(by).sort().slice(-max);if(!ds.length)return '';
@@ -2732,7 +2742,7 @@ var _vpH=vProfile;
 vProfile=function(){
   var h=_vpH(),a=ath(selA);
   if(view!=='profile'||!a||ROLE!=='coach')return h;
-  var ht=histTable(a,10,false),K='<div class="grp"><h2>Kayıtlar</h2>',i=h.indexOf(K);
+  var ht=histTable(a,80,false),K='<div class="grp"><h2>Kayıtlar</h2>',i=h.indexOf(K);
   if(!ht)return h;
   return i>-1?h.slice(0,i)+ht+h.slice(i):h+ht;
 };
@@ -2951,7 +2961,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792339283;
+var BUILD_ID=1792340174;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
