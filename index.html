@@ -2595,7 +2595,9 @@ SETK.push('hiit');
 var HG=['-','Grup 1 – Dayanıklılık','Grup 2 – Hibrit','Grup 3 – Hız'],HGM=['-','Grup 1 – Düşük MAS','Grup 2 – Orta MAS','Grup 3 – Yüksek MAS'];
 function hiitMas(){return hiitCfg().method==='mas';}
 function HGN(g){return (hiitMas()?HGM:HG)[g];}
-var hiitPlan=today(),hiitEdit=false,hiitDate=today();
+var hiitPlan='',hiitEdit=false,hiitDate=today();
+function hiitUp(){return hiitPlan||'9999-12-31';}
+function hiitShow(){return hiitPlan||today();}
 function hiitCfg(){return Object.assign({method:'asr',pct:0.1,mpct:1,run:15,rest:15,setMin:4,sets:2,cone:5},db.hiit||{});}
 function hiitMethod(v){var c=Object.assign({},hiitCfg());c.method=v==='mas'?'mas':'asr';db.hiit=c;save();render();}
 function hiitSet(k,v){
@@ -2607,7 +2609,7 @@ function lastOn(aid,key,upTo){var b=null;db.records.forEach(function(r){if(r.a==
 function hiitRows(){
   var c=hiitCfg(),L=[];
   var byMas=c.method==='mas';
-  db.athletes.forEach(function(a){var m=lastOn(a.id,'mas',hiitPlan),s=lastOn(a.id,'vmax',hiitPlan);
+  db.athletes.forEach(function(a){var m=lastOn(a.id,'mas',hiitUp()),s=lastOn(a.id,'vmax',hiitUp());
     if(byMas){if(m)L.push({a:a,mss:s?s.v:null,mas:m.v,asr:s?s.v-m.v:null,md:m.d,sd:s?s.d:null});}
     else if(m&&s)L.push({a:a,mss:s.v,mas:m.v,asr:s.v-m.v,md:m.d,sd:s.d});});
   var as=L.map(function(x){return byMas?x.mas:x.asr}),p1=as.length>=3?pctl(as,1/3):null,p2=as.length>=3?pctl(as,2/3):null,reps=Math.floor(c.setMin*60/(c.run+c.rest));
@@ -2635,7 +2637,7 @@ function vHiit(){
   var inp=function(id,k,lbl,val){return '<div><label for="'+id+'">'+lbl+'</label><input id="'+id+'" inputmode="decimal" value="'+val+'" onchange="hiitSet(\''+k+'\',this.value)"></div>';};
   var h='<button class="back" onclick="go(\'prog\')">Programa dön</button><h1>HIIT mesafe hesaplama</h1><p class="sub">'+(c.method==='mas'?'MAS değerinden grup ve koşu mesafeleri otomatik hesaplanır.':'MSS ve MAS değerlerinden ASR, grup ve koşu mesafeleri otomatik hesaplanır.')+'</p>';
   h+='<div class="form"><b>Ayarlar</b><label for="hs-m">Hesaplama yöntemi</label><select id="hs-m" onchange="hiitMethod(this.value)"><option value="asr"'+(c.method==='mas'?'':' selected')+'>ASR üzerinden (MSS ve MAS gerekir)</option><option value="mas"'+(c.method==='mas'?' selected':'')+'>MAS üzerinden (sadece MAS gerekir)</option></select><div class="two">'+(c.method==='mas'?inp('hs-mpct','mpct','MAS yüzdesi (%)',Math.round(c.mpct*10000)/100):inp('hs-pct','pct','ASR yüzdesi (%)',Math.round(c.pct*10000)/100))+inp('hs-run','run','Koşu süresi (sn)',c.run)+inp('hs-rest','rest','Dinlenme süresi (sn)',c.rest)+inp('hs-set','setMin','Set süresi (dk)',c.setMin)+inp('hs-sets','sets','Set sayısı',c.sets)+inp('hs-cone','cone','Koni yuvarlama (m)',c.cone)+'</div>'+
-    '<label for="hs-date">Hesaplama tarihi (bu tarihe kadarki son MAS ve MSS değerleri kullanılır)</label><input id="hs-date" type="date" value="'+hiitPlan+'" onchange="hiitPlan=this.value||today();render()"></div>';
+    '<label for="hs-date">Hesaplama tarihi (bu tarihe kadarki son MAS ve MSS değerleri kullanılır)</label><input id="hs-date" type="date" value="'+hiitShow()+'" onchange="hiitPlan=this.value&&this.value!==today()?this.value:\'\';render()">'+(hiitPlan?' <button class="btn sm" onclick="hiitPlan=\'\';render()">En güncele dön</button>':' <span class="m">(otomatik: en son girilen değerler)</span>')+'</div>';
   if(!L.length)h+='<div class="empty"><p>Henüz hesaplanacak veri yok. Sporcuların '+(c.method==='mas'?'MAS':'MSS ve MAS')+' değerlerini aşağıdan gir ya da Excel aktar ile yükle.</p></div>';
   else{
     h+='<h3 class="ct" style="margin-top:18px">Gruplar</h3>'+hiitGroups(L)+'<h3 class="ct" style="margin-top:18px">Sporcu planı</h3><div class="tw">'+hiitTable(L,false)+'</div>';
@@ -2664,16 +2666,16 @@ function hiitSave(){
     if(s!=null)rec.v.vmax=s;if(m!=null)rec.v.mas=m;n++;
   });
   if(!n){toast('Değer girmedin.');return;}
-  hiitEdit=false;if(d>hiitPlan)hiitPlan=d;save();render();toast(n+' sporcunun değeri '+trDate(d)+' tarihine kaydedildi.');
+  hiitEdit=false;save();render();toast(n+' sporcunun değeri '+trDate(d)+' tarihine kaydedildi.');
 }
 function hiitRep(){
   var c=hiitCfg(),L=hiitRows();
-  return RS+'<style>.r.hc{padding:26px 32px}.r.hc h1{font-size:30px}.r.hc h2{margin:14px 0 4px;padding-top:6px}.r.hc th,.r.hc td{padding:2.5px 3px;font-size:11px}.r.hc .ft{margin-top:12px}</style><div class="r hc"><h1>HIIT mesafe planı</h1><div class="m">FETHİYESPOR U19 · Hesaplama tarihi '+trDate(hiitPlan)+'</div><div class="m">'+hiitLine(c)+'</div><h2>Gruplar</h2><table><thead><tr><th>Grup</th><th>Sporcu</th><th>'+(hiitMas()?'Ort. MAS':'Ort. ASR')+'</th><th>Ort. hedef hız</th><th>Ort. mesafe (m)</th></tr></thead><tbody>'+[1,2,3].map(function(g){var q=L.filter(function(x){return x.g===g});if(!q.length)return '';var av=function(k){return q.reduce(function(s,x){return s+x[k]},0)/q.length};return '<tr><td>'+HGN(g)+'</td><td>'+q.length+'</td><td>'+(hiitMas()?av('mas').toFixed(1):av('asr').toFixed(2))+'</td><td>'+av('tv').toFixed(1)+'</td><td>'+av('dist').toFixed(1)+'</td></tr>';}).join('')+'</tbody></table><h2>Sporcu planı</h2>'+hiitTable(L,true)+'<div class="ft">'+(hiitMas()?'Hedef hız = MAS × MAS yüzdesi. Mesafe = hedef hız (m/sn) × koşu süresi. Gruplar MAS değerine göre üç eşit dilimdir (Grup 1 en düşük MAS).':'Hedef hız = MAS + ASR × ASR yüzdesi. Mesafe = hedef hız (m/sn) × koşu süresi. Gruplar ASR değerine göre üç eşit dilimdir.')+' MAS tarihi, kullanılan değerin test günüdür.</div></div>';
+  return RS+'<style>.r.hc{padding:26px 32px}.r.hc h1{font-size:30px}.r.hc h2{margin:14px 0 4px;padding-top:6px}.r.hc th,.r.hc td{padding:2.5px 3px;font-size:11px}.r.hc .ft{margin-top:12px}</style><div class="r hc"><h1>HIIT mesafe planı</h1><div class="m">FETHİYESPOR U19 · Hesaplama tarihi '+trDate(hiitShow())+'</div><div class="m">'+hiitLine(c)+'</div><h2>Gruplar</h2><table><thead><tr><th>Grup</th><th>Sporcu</th><th>'+(hiitMas()?'Ort. MAS':'Ort. ASR')+'</th><th>Ort. hedef hız</th><th>Ort. mesafe (m)</th></tr></thead><tbody>'+[1,2,3].map(function(g){var q=L.filter(function(x){return x.g===g});if(!q.length)return '';var av=function(k){return q.reduce(function(s,x){return s+x[k]},0)/q.length};return '<tr><td>'+HGN(g)+'</td><td>'+q.length+'</td><td>'+(hiitMas()?av('mas').toFixed(1):av('asr').toFixed(2))+'</td><td>'+av('tv').toFixed(1)+'</td><td>'+av('dist').toFixed(1)+'</td></tr>';}).join('')+'</tbody></table><h2>Sporcu planı</h2>'+hiitTable(L,true)+'<div class="ft">'+(hiitMas()?'Hedef hız = MAS × MAS yüzdesi. Mesafe = hedef hız (m/sn) × koşu süresi. Gruplar MAS değerine göre üç eşit dilimdir (Grup 1 en düşük MAS).':'Hedef hız = MAS + ASR × ASR yüzdesi. Mesafe = hedef hız (m/sn) × koşu süresi. Gruplar ASR değerine göre üç eşit dilimdir.')+' MAS tarihi, kullanılan değerin test günüdür.</div></div>';
 }
-function hiitPdf(){makePdf(hiitRep(),'HIIT-mesafe-'+hiitPlan+'.pdf');}
+function hiitPdf(){makePdf(hiitRep(),'HIIT-mesafe-'+hiitShow()+'.pdf');}
 function hiitCsv(){
   var L=hiitRows();
-  dlFile('hiit-mesafe-'+hiitPlan+'.csv','Sporcu;Grup;MSS;MAS;MAS tarihi;ASR;Hedef hız (km/sa);Mesafe (m);Koni (m);Tekrar/set;Toplam (m);10 sn;15 sn;20 sn\r\n'+L.map(function(x){return [x.a.n,HGN(x.g),x.mss,x.mas,x.md,x.asr,x.tv,x.dist,x.cone,x.reps,x.tot,x.d10,x.d15,x.d20].map(function(v){return v==null?'':typeof v==='number'?String(Math.round(v*100)/100).replace('.',','):v}).join(';')}).join('\r\n')+'\r\n');
+  dlFile('hiit-mesafe-'+hiitShow()+'.csv','Sporcu;Grup;MSS;MAS;MAS tarihi;ASR;Hedef hız (km/sa);Mesafe (m);Koni (m);Tekrar/set;Toplam (m);10 sn;15 sn;20 sn\r\n'+L.map(function(x){return [x.a.n,HGN(x.g),x.mss,x.mas,x.md,x.asr,x.tv,x.dist,x.cone,x.reps,x.tot,x.d10,x.d15,x.d20].map(function(v){return v==null?'':typeof v==='number'?String(Math.round(v*100)/100).replace('.',','):v}).join(';')}).join('\r\n')+'\r\n');
 }
 var _vprH=vProg;
 vProg=function(){return '<div class="row" style="margin-bottom:8px"><button class="btn ghost" onclick="go(\'hiit\')">HIIT mesafe hesaplama</button></div>'+_vprH();};
