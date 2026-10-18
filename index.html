@@ -2000,7 +2000,7 @@ async function boot(){
       showClaim();return;
     }
     await loadAll();
-    if(ROLE==='coach'){var _c1=collapseBody(),_c2=seedMatches(),_c3=seedProgram(),_c4=migHop(),_c5=seedHop();if(_c1||_c2||_c3||_c4||_c5)save();}
+    if(ROLE==='coach'){var _c1=collapseBody(),_c2=seedMatches(),_c3=seedProgram(),_c4=migHop(),_c5=seedHop(),_c6=seedJump();if(_c1||_c2||_c3||_c4||_c5||_c6)save();}
     if(ROLE==='athlete'){ME=db.athletes[0]?db.athletes[0].id:null;selA=ME;}
     authHide();chrome();
     view=ROLE==='athlete'?'me':'athletes';
@@ -2596,7 +2596,7 @@ vProfile=function(){
 };
 
 // ---- HIIT mesafe hesaplama (ASR tabanlı), tarih raporları ve yedek
-SETK.push('hiit');SETK.push('hopPurge');SETK.push('hopSeed');
+SETK.push('hiit');SETK.push('hopPurge');SETK.push('hopSeed');SETK.push('jumpSeed');
 var HG=['-','Grup 1 – Dayanıklılık','Grup 2 – Hibrit','Grup 3 – Hız'],HGM=['-','Grup 1 – Düşük MAS','Grup 2 – Orta MAS','Grup 3 – Yüksek MAS'];
 function hiitMas(){return hiitCfg().method==='mas';}
 function HGN(g){return (hiitMas()?HGM:HG)[g];}
@@ -2951,7 +2951,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792336458;
+var BUILD_ID=1792338119;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3002,6 +3002,35 @@ function seedHop(){
   });
   db.hopSeed={v:1,n:n,un:un};
   setTimeout(function(){try{toast(n+' sporcunun hop test verisi yerleştirildi'+(un.length?'. Eşleşmeyen: '+un.join(', '):'.'));}catch(e){}},2500);
+  return true;
+}
+
+// 25.08.2026 CMJ, SJ, DJ (MyJump Lab): yalnızca uygulamada eksik olan değerleri doldurur, var olana dokunmaz.
+// [ad, CMJ cm (en iyi), SJ cm (en iyi), [DJ sıçrama cm, DJ temas ms]]
+var JUMP_SEED=[["AKKAŞ", 53.0, 51.16, [31, 250]], ["Ada", 33.77, 30.46, [26, 208]], ["Ahmet Aksoy", 45.18, 46.5, [42, 292]], ["Ahmet Yasir", 44.72, 42.26, [36, 333]], ["Ali Eren", 56.51, 37.48, [36, 208]], ["Arda Yakup", 55.35, 47.58, [36, 250]], ["Celal", 46.59, 35.81, [36, 292]], ["ERBAY", 46.54, 39.87, [48, 292]], ["Ege Bilge", 39.44, 35.95, [36, 375]], ["Eymen Acar", 46.52, 35.91, [31, 292]], ["Hüseyin", 40.15, 35.53, [26, 208]], ["KADİR", 54.7, 51.33, [48, 250]], ["Kaan", 35.01, 29.29, [31, 333]], ["MELIH", 41.84, 34.3, [31, 167]], ["Naim", 48.36, 40.49, [42, 417]], ["Peter", 53.79, 52.23, [36, 375]], ["Samet", 46.64, 47.76, [36, 250]], ["Yusuf Efe", 44.52, 46.12, [42, 292]], ["Yusuf Kaya", 51.97, 42.2, [36, 250]], ["Yusuf İçcan", 42.25, 36.26, [36, 250]], ["İsmail", 47.68, 43.32, [42, 208]]];
+function seedJump(){
+  if(db.jumpSeed||!db.athletes.length)return false;
+  var un=[],amb=[],filled=0,ath=0;
+  JUMP_SEED.forEach(function(r){
+    var tk=nTok(r[0]),hit=db.athletes.filter(function(x){return nMatch(tk,nTok(x.n))});
+    if(!hit.length){un.push(r[0]);return;}
+    if(hit.length>1){amb.push(r[0]);return;}
+    var a=hit[0],has=function(k){return db.records.some(function(q){return q.a===a.id&&q.d>='2026-08-20'&&q.d<='2026-08-31'&&q.v&&q.v[k]!=null})};
+    var add={};
+    if(r[1]!=null&&!has('cmjH'))add.cmjH=r[1];
+    if(r[2]!=null&&!has('sjH'))add.sjH=r[2];
+    if(r[3]){
+      if(!has('djH'))add.djH=r[3][0];
+      if(!has('djGct'))add.djGct=r[3][1];
+      if(!has('djD'))add.djD=45;
+    }
+    var ks=Object.keys(add);if(!ks.length)return;
+    var ex=db.records.filter(function(q){return q.a===a.id&&q.d==='2026-08-25'})[0];
+    if(ex)Object.assign(ex.v,add);else db.records.push({id:uid(),a:a.id,d:'2026-08-25',v:add});
+    filled+=ks.length;ath++;
+  });
+  db.jumpSeed={v:1,n:filled,un:un,amb:amb};
+  setTimeout(function(){try{toast('Eksik CMJ/SJ/DJ verisi dolduruldu: '+ath+' sporcu, '+filled+' değer'+(un.length||amb.length?'. Eşleşmeyen: '+un.concat(amb).join(', '):'.'));}catch(e){}},5000);
   return true;
 }
 
