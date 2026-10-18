@@ -2000,7 +2000,7 @@ async function boot(){
       showClaim();return;
     }
     await loadAll();
-    if(ROLE==='coach'){var _c1=collapseBody(),_c2=seedMatches(),_c3=seedProgram();if(_c1||_c2||_c3)save();}
+    if(ROLE==='coach'){var _c1=collapseBody(),_c2=seedMatches(),_c3=seedProgram(),_c4=migHop();if(_c1||_c2||_c3||_c4)save();}
     if(ROLE==='athlete'){ME=db.athletes[0]?db.athletes[0].id:null;selA=ME;}
     authHide();chrome();
     view=ROLE==='athlete'?'me':'athletes';
@@ -2171,16 +2171,16 @@ var txFiles=[],txAmb={},txAmbKeys=[],txOver=false;
 var TRMON={oca:1,sub:2,mar:3,nis:4,may:5,haz:6,tem:7,agu:8,eyl:9,eki:10,kas:11,ara:12};
 M.mas=['MAS','km/sa','high',1];M.asr=['ASR (MSS − MAS)','km/sa','none',1];
 M.agCtR=['5-0-5 sağ temas','ms','low',0];M.agCtL=['5-0-5 sol temas','ms','low',0];
-M.slQR=['Tek bacak hop RSI sağ','','high',2];M.slQL=['Tek bacak hop RSI sol','','high',2];M.hopAsym=['Hop RSI sağ/sol farkı','%','low',1];
+M.hopAsym=['Tek bacak hop asimetrisi','%','low',1];
 (function(){
   function g(n){return T.filter(function(x){return x.n===n})[0];}
   var a=g('5-0-5 çeviklik');a.f.push(['agCtR','Sağ temas süresi','ms'],['agCtL','Sol temas süresi','ms']);a.m.push('agCtR','agCtL');
-  var b=g('Tek bacak hop');b.f.push(['slQR','Sağ bacak RSI',''],['slQL','Sol bacak RSI','']);b.m.push('slQR','slQL','hopAsym');
+  var b=g('Tek bacak hop');b.m.push('hopAsym');
   g('Hop test').f.push(['hopRsi','Çift ayak RSI (hazır değer)','']);
   g('DJ').f.push(['djRsi','RSI (hazır değer)','']);
   T.push({n:'MAS (aerobik hız)',f:[['mas','MAS','km/sa']],m:['mas','asr']});TPL.mas='MAS (km/sa)';TALT.mas=['mas','maskmsa','aerobikhiz'];
-  TPL.agCtR='5-0-5 sağ temas (ms)';TPL.agCtL='5-0-5 sol temas (ms)';TPL.slQR='Tek bacak hop RSI sağ';TPL.slQL='Tek bacak hop RSI sol';TPL.hopRsi='Çift ayak hop RSI';TPL.djRsi='DJ RSI';
-  var d0=derive;derive=function(v){var o=d0(v);if(v.vmax&&v.mas)o.asr=v.vmax-v.mas;if(v.slQR&&v.slQL)o.hopAsym=Math.abs(v.slQR-v.slQL)/Math.max(v.slQR,v.slQL)*100;return o;};
+  TPL.agCtR='5-0-5 sağ temas (ms)';TPL.agCtL='5-0-5 sol temas (ms)';TPL.hopRsi='Çift ayak hop RSI';TPL.djRsi='DJ RSI';
+  var d0=derive;derive=function(v){var o=d0(v);if(v.vmax&&v.mas)o.asr=v.vmax-v.mas;if(v.slR&&v.slL)o.hopAsym=Math.abs(v.slR-v.slL)/Math.max(v.slR,v.slL)*100;return o;};
 })();
 function fold(t){return String(t==null?'':t).toLocaleLowerCase('tr').replace(/ı/g,'i').replace(/ç/g,'c').replace(/ğ/g,'g').replace(/ö/g,'o').replace(/ş/g,'s').replace(/ü/g,'u').replace(/[^a-z0-9]/g,'');}
 function nTok(s){var t=String(s==null?'':s).replace(/\s+/g,' ').trim();if(!t)return [];var seen={},o=[];t.split(' ').forEach(function(w){var f=fold(w);if(f&&!seen[f]){seen[f]=1;o.push(f);}});return o;}
@@ -2240,7 +2240,7 @@ function rcTrials(rows){
     var f=fold(c);if(f)cur=f;
     if(typeof r1[i]!=='number'){if(f)cur=f;return;}
     var key='';
-    if(/hop/.test(cur)){key=/sag/.test(cur)?'slQR':/sol/.test(cur)?'slQL':/cift/.test(cur)?'hopRsi':'';}
+    if(/hop/.test(cur)){key=/sag/.test(cur)?'slR':/sol/.test(cur)?'slL':/cift/.test(cur)?'hopRsi':'';}
     else if(cur==='sj')key='sjH';else if(cur==='cmj')key='cmjH';else if(/^dj/.test(cur))key='djRsi';
     if(key)cols.push({i:i,k:key});
   });
@@ -2946,7 +2946,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792334795;
+var BUILD_ID=1792335317;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -2965,6 +2965,20 @@ async function checkUpdate(){
 setInterval(checkUpdate,90000);
 document.addEventListener('visibilitychange',function(){if(!document.hidden)setTimeout(checkUpdate,1500);});
 setTimeout(checkUpdate,5000);
+
+// Eski "tek bacak hop RSI" değerlerini tek bacak hop sağ/sol alanlarına taşı
+function migHop(){
+  var ch=false;
+  db.records.forEach(function(r){
+    var v=r.v;if(!v)return;
+    if(v.slQR!=null||v.slQL!=null){
+      if(v.slQR!=null){if(v.slR==null)v.slR=v.slQR;delete v.slQR;}
+      if(v.slQL!=null){if(v.slL==null)v.slL=v.slQL;delete v.slQL;}
+      ch=true;
+    }
+  });
+  return ch;
+}
 
 // ---- Uygulama olarak yükleme (PWA)
 var DEFERRED=null;
