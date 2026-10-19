@@ -1974,7 +1974,7 @@ render=function(){
 };
 function chrome(){
   var nv=document.querySelector('nav');if(nv)nv.style.display=ROLE==='athlete'?'none':'flex';
-  document.body.classList.toggle('side',ROLE!=='athlete');
+  try{document.body.classList.toggle('side',ROLE!=='athlete');}catch(e){}
   var bar=document.getElementById('topbar');
   if(!bar){bar=document.createElement('div');bar.id='topbar';document.body.appendChild(bar);}
   bar.innerHTML='<span id="sync-st" class="ok">Kaydedildi</span>'+(isStandalone()?'':'<button onclick="installApp()">Yükle</button>')+'<button onclick="doSignOut()">Çıkış</button>';
@@ -2962,7 +2962,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792412455;
+var BUILD_ID=1792412505;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
