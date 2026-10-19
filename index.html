@@ -2963,7 +2963,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792413597;
+var BUILD_ID=1792414204;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3230,13 +3230,13 @@ async function fetchMx(){
   if(!SBC||ROLE!=='athlete'||MX.off)return;
   try{
     var r=await SBC.from('athlete_matches').select('*').order('d');
-    if(r.error){MX.off=true;return;}
-    var sig=JSON.stringify(r.data||[]);MX.last=Date.now();
+    if(r.error){MX.off=true;MX.errMine=r.error.message||'okunamadı';render();return;}
+    MX.errMine=null;var sig=JSON.stringify(r.data||[]);MX.last=Date.now();
     if(sig===MX.lastSig)return;
     MX.lastSig=sig;MX.mine=r.data||[];
     var t=document.activeElement&&document.activeElement.tagName;
     if(t!=='INPUT'&&t!=='SELECT'&&t!=='TEXTAREA')render();
-  }catch(e){}
+  }catch(e){MX.errMine=(e&&e.message)||String(e);MX.last=Date.now();}
 }
 setInterval(function(){
   if(!SBC||!ROLE||document.hidden)return;
@@ -3261,7 +3261,8 @@ vPrev=function(){
 };
 function mxMine(){
   var ms=MX.mine||[];
-  if(!ms.length)return '';
+  if(MX.errMine)return '<div class="grp"><h2>Maçlarım</h2><p class="dim">Maç verisi okunamadı: '+esc(MX.errMine)+'</p></div>';
+  if(!ms.length)return MX.last?'<div class="grp"><h2>Maçlarım</h2><p class="dim">Henüz maç verin yok.</p></div>':'<div class="grp"><h2>Maçlarım</h2><p class="dim">Yükleniyor...</p></div>';
   var t={m:0,s:0,min:0,g:0,a:0,y:0};
   var rows=ms.slice().sort(function(x,y){return x.d<y.d?1:-1}).map(function(r){
     var q=r.data||{},dk=Math.max(0,(q.o||0)-(q.i||0));
@@ -3274,7 +3275,8 @@ function mxMine(){
     '<div class="tw" style="margin-top:12px"><table class="tb" style="min-width:560px"><thead><tr><th>Tarih</th><th>Maç</th><th>Durum</th><th>Dk</th><th>Gol</th><th>Asist</th><th>Sarı</th></tr></thead><tbody>'+rows+'</tbody></table></div><p class="dim" style="margin:6px 0 0">Kaynak: TFF. Dakikalar ilk 11 ve oyuncu değişikliklerinden hesaplanır.</p></div>';
 }
 var _vmMx=vMe;
-vMe=function(){var h=_vmMx();return h.indexOf('class="empty"')>-1&&h.indexOf('Sporcu kaydın')>-1?h:h+mxMine();};
+vMe=function(){if(!MX.last&&!MX.fb){MX.fb=true;fetchMx().then(function(){MX.fb=false;});}
+  var h=_vmMx();return h.indexOf('class="empty"')>-1&&h.indexOf('Sporcu kaydın')>-1?h:h+mxMine();};
 
 // ---- Uygulama olarak yükleme (PWA)
 var DEFERRED=null;
