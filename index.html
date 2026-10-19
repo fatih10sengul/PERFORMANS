@@ -2963,7 +2963,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792412738;
+var BUILD_ID=1792412999;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3185,6 +3185,94 @@ render=function(){
 };
 var _snMx=setNav;
 setNav=function(){_snMx();var b=document.getElementById('n-matches');if(b){if(view==='matches')b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}};
+
+// ---- Sporcunun kendi maç verileri (athlete_matches tablosu)
+SETK.push('mxOff');
+var MX={snap:null,off:false,busy:false,mine:[],last:0,lastSig:''};
+function mxOffList(){return Array.isArray(db.mxOff)?db.mxOff:[];}
+function mxWanted(){
+  var o={};
+  db.athletes.forEach(function(a){
+    if(mxOffList().indexOf(a.id)>-1)return;
+    mStat(a).rows.forEach(function(x){
+      if(!x.p)return;
+      var p=x.p,m=x.m;
+      o[a.id+'|'+m.id]={athlete_id:a.id,match_id:m.id,d:m.d,data:{opp:m.opp,h:!!m.h,gf:m.gf,ga:m.ga,s:p.s?1:0,i:p.i||0,o:p.o||0,g:p.g||0,a:p.a||0,y:p.y||0}};
+    });
+  });
+  return o;
+}
+async function syncMx(){
+  if(!SBC||ROLE!=='coach'||MX.off||MX.busy||SYNC.busy)return;
+  MX.busy=true;
+  try{
+    if(!MX.snap){
+      var r=await SBC.from('athlete_matches').select('athlete_id,match_id,d,data');
+      if(r.error){MX.off=true;return;}
+      MX.snap={};(r.data||[]).forEach(function(x){MX.snap[x.athlete_id+'|'+x.match_id]=JSON.stringify({athlete_id:x.athlete_id,match_id:x.match_id,d:String(x.d).slice(0,10),data:x.data});});
+    }
+    var want=mxWanted(),up=[],dl=[];
+    Object.keys(want).forEach(function(k){var j=JSON.stringify(want[k]);if(MX.snap[k]!==j)up.push(k);});
+    Object.keys(MX.snap).forEach(function(k){if(!want[k])dl.push(k);});
+    for(var i=0;i<dl.length;i++){
+      var p=dl[i].split('|'),r2=await SBC.from('athlete_matches').delete().eq('athlete_id',p[0]).eq('match_id',p[1]);
+      if(r2.error)throw r2.error;delete MX.snap[dl[i]];
+    }
+    for(var b=0;b<up.length;b+=200){
+      var ch=up.slice(b,b+200),r3=await SBC.from('athlete_matches').upsert(ch.map(function(k){return want[k]}),{onConflict:'athlete_id,match_id'});
+      if(r3.error)throw r3.error;
+      ch.forEach(function(k){MX.snap[k]=JSON.stringify(want[k]);});
+    }
+  }catch(e){}finally{MX.busy=false;}
+}
+async function fetchMx(){
+  if(!SBC||ROLE!=='athlete'||MX.off)return;
+  try{
+    var r=await SBC.from('athlete_matches').select('*').order('d');
+    if(r.error){MX.off=true;return;}
+    var sig=JSON.stringify(r.data||[]);MX.last=Date.now();
+    if(sig===MX.lastSig)return;
+    MX.lastSig=sig;MX.mine=r.data||[];
+    var t=document.activeElement&&document.activeElement.tagName;
+    if(t!=='INPUT'&&t!=='SELECT'&&t!=='TEXTAREA')render();
+  }catch(e){}
+}
+setInterval(function(){
+  if(!SBC||!ROLE||document.hidden)return;
+  if(ROLE==='coach')syncMx();
+  else if(ROLE==='athlete'&&(!MX.last||Date.now()-MX.last>60000))fetchMx();
+},4000);
+function setMx(aid,on){
+  var l=mxOffList().filter(function(x){return x!==aid});
+  if(!on)l.push(aid);
+  db.mxOff=l;save();setTimeout(syncMx,1500);toast(on?'Maç verileri açıldı':'Maç verileri kapatıldı');
+}
+var _vpvMx=vPrev;
+vPrev=function(){
+  var h=_vpvMx();
+  if(ROLE!=='coach')return h;
+  var a=ath(selA),mark='<p class="dim" style="margin:12px 0 0">Varsayılan: yalnızca';
+  if(!a||h.indexOf(mark)<0)return h;
+  var on=mxOffList().indexOf(a.id)<0;
+  var box='<label class="chk"><input type="checkbox" '+(on?'checked':'')+' onchange="setMx(\''+a.id+'\',this.checked)">Maç verilerim (TFF)</label>';
+  return h.replace(mark,box+mark);
+};
+function mxMine(){
+  var ms=MX.mine||[];
+  if(!ms.length)return '';
+  var t={m:0,s:0,min:0,g:0,a:0,y:0};
+  var rows=ms.slice().sort(function(x,y){return x.d<y.d?1:-1}).map(function(r){
+    var q=r.data||{},dk=Math.max(0,(q.o||0)-(q.i||0));
+    t.m++;t.s+=q.s?1:0;t.min+=dk;t.g+=q.g||0;t.a+=q.a||0;t.y+=q.y||0;
+    var title=q.h?'Fethiyespor - '+q.opp:q.opp+' - Fethiyespor',sc=q.h?q.gf+'-'+q.ga:q.ga+'-'+q.gf;
+    var durum=q.s?(q.o<90?'İlk 11 ('+q.o+'\'de çıktı)':'İlk 11'):'Yedek ('+q.i+'\'de girdi)';
+    return '<tr><td>'+trDate(String(r.d).slice(0,10))+'</td><td>'+esc(title)+' <b>'+sc+'</b></td><td>'+durum+'</td><td>'+dk+'</td><td>'+(q.g||0)+'</td><td>'+(q.a||0)+'</td><td>'+(q.y||0)+'</td></tr>';
+  }).join('');
+  return '<div class="grp"><h2>Maçlarım</h2><div class="tw"><table class="tb" style="min-width:0"><thead><tr><th>Maç</th><th>İlk 11</th><th>Dakika</th><th>Gol</th><th>Asist</th><th>Sarı</th></tr></thead><tbody><tr><td>'+t.m+'</td><td>'+t.s+'</td><td>'+t.min+'</td><td>'+t.g+'</td><td>'+t.a+'</td><td>'+t.y+'</td></tr></tbody></table></div>'+
+    '<div class="tw" style="margin-top:12px"><table class="tb" style="min-width:560px"><thead><tr><th>Tarih</th><th>Maç</th><th>Durum</th><th>Dk</th><th>Gol</th><th>Asist</th><th>Sarı</th></tr></thead><tbody>'+rows+'</tbody></table></div><p class="dim" style="margin:6px 0 0">Kaynak: TFF. Dakikalar ilk 11 ve oyuncu değişikliklerinden hesaplanır.</p></div>';
+}
+var _vmMx=vMe;
+vMe=function(){var h=_vmMx();return h.indexOf('class="empty"')>-1&&h.indexOf('Sporcu kaydın')>-1?h:h+mxMine();};
 
 // ---- Uygulama olarak yükleme (PWA)
 var DEFERRED=null;
