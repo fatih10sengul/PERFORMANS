@@ -1,6 +1,6 @@
 // Basit önbellek: uygulama dosyaları önce ağdan alınır, ağ yoksa önbellekten açılır.
 // Supabase istekleri (başka alan adı) ve kullanıcı verisi hiçbir zaman önbelleğe alınmaz.
-const C = 'pp-v34';
+const C = 'pp-v35';
 const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(C).then(c => c.addAll(SHELL)).catch(() => {}));

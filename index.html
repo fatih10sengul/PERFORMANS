@@ -1974,6 +1974,7 @@ render=function(){
 };
 function chrome(){
   var nv=document.querySelector('nav');if(nv)nv.style.display=ROLE==='athlete'?'none':'flex';
+  document.body.classList.toggle('side',ROLE!=='athlete');
   var bar=document.getElementById('topbar');
   if(!bar){bar=document.createElement('div');bar.id='topbar';document.body.appendChild(bar);}
   bar.innerHTML='<span id="sync-st" class="ok">Kaydedildi</span>'+(isStandalone()?'':'<button onclick="installApp()">Yükle</button>')+'<button onclick="doSignOut()">Çıkış</button>';
@@ -2961,7 +2962,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792343926;
+var BUILD_ID=1792412455;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3121,6 +3122,16 @@ function undoMas(){
   db.masUndone=1;
   return true;
 }
+
+// Ana menü solda (dikey)
+(function(){var st=document.createElement('style');st.textContent=
+'nav{top:0;bottom:0;left:0;right:auto;width:74px;flex-direction:column;justify-content:flex-start;border-top:0;border-right:1.5px solid var(--ink);padding:12px 0;overflow-y:auto}'+
+'nav button{flex:none;width:100%;border-top:0;border-left:4px solid transparent;margin:0;padding:16px 2px;font-size:12px;line-height:1.2;word-break:break-word}'+
+'nav button[aria-current="page"]{border-top-color:transparent;border-left-color:var(--accent)}'+
+'body.side{padding-left:74px}body.side #app{padding-bottom:40px}'+
+'body.side #toast{bottom:24px;left:calc(50% + 37px)}'+
+'@media(min-width:700px){nav{width:150px}nav button{font-size:15px;text-align:left;padding:16px 16px}body.side{padding-left:150px}body.side #toast{left:calc(50% + 75px)}}';
+document.head.appendChild(st);})();
 
 // ---- Uygulama olarak yükleme (PWA)
 var DEFERRED=null;
