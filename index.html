@@ -2963,7 +2963,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792412999;
+var BUILD_ID=1792413597;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3208,7 +3208,7 @@ async function syncMx(){
   try{
     if(!MX.snap){
       var r=await SBC.from('athlete_matches').select('athlete_id,match_id,d,data');
-      if(r.error){MX.off=true;return;}
+      if(r.error){MX.off=true;MX.err=r.error.message||'tablo okunamadı';return;}
       MX.snap={};(r.data||[]).forEach(function(x){MX.snap[x.athlete_id+'|'+x.match_id]=JSON.stringify({athlete_id:x.athlete_id,match_id:x.match_id,d:String(x.d).slice(0,10),data:x.data});});
     }
     var want=mxWanted(),up=[],dl=[];
@@ -3223,7 +3223,8 @@ async function syncMx(){
       if(r3.error)throw r3.error;
       ch.forEach(function(k){MX.snap[k]=JSON.stringify(want[k]);});
     }
-  }catch(e){}finally{MX.busy=false;}
+    MX.err=null;MX.ok=Object.keys(MX.snap).length;
+  }catch(e){MX.err=(e&&e.message)||String(e);}finally{MX.busy=false;}
 }
 async function fetchMx(){
   if(!SBC||ROLE!=='athlete'||MX.off)return;
@@ -3255,7 +3256,8 @@ vPrev=function(){
   if(!a||h.indexOf(mark)<0)return h;
   var on=mxOffList().indexOf(a.id)<0;
   var box='<label class="chk"><input type="checkbox" '+(on?'checked':'')+' onchange="setMx(\''+a.id+'\',this.checked)">Maç verilerim (TFF)</label>';
-  return h.replace(mark,box+mark);
+  var st=MX.err?'<p class="dim" style="color:var(--bad,#c0392b)">Maç verisi gönderilemedi: '+esc(MX.err)+'</p>':MX.ok!=null?'<p class="dim">Maç verisi gönderildi: Supabase\'de '+MX.ok+' satır var'+(a?'; bu sporcuda '+Object.keys(MX.snap||{}).filter(function(k){return k.indexOf(a.id+'|')===0}).length+' maç':'')+'.</p>':'<p class="dim">Maç verisi gönderimi bekleniyor...</p>';
+  return h.replace(mark,box+st+mark);
 };
 function mxMine(){
   var ms=MX.mine||[];
