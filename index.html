@@ -108,6 +108,7 @@ nav button{font-size:14px;padding:15px 2px}
   <button id="n-prog" onclick="go('prog')">Program</button>
   <button id="n-inbox" onclick="go('inbox')">Gelen</button>
   <button id="n-team" onclick="go('team')">Takım</button>
+  <button id="n-matches" onclick="go('matches')">Maçlar</button>
 </nav>
 
 <script>
@@ -2962,7 +2963,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792412505;
+var BUILD_ID=1792412738;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3132,6 +3133,58 @@ function undoMas(){
 'body.side #toast{bottom:24px;left:calc(50% + 37px)}'+
 '@media(min-width:700px){nav{width:150px}nav button{font-size:15px;text-align:left;padding:16px 16px}body.side{padding-left:150px}body.side #toast{left:calc(50% + 75px)}}';
 document.head.appendChild(st);})();
+
+// ---- Maçlar ekranı (antrenör)
+var mxSel=null,mxMode='list',mxSort='min',mxDir=-1;
+function mxGo(id){mxSel=(mxSel===id?null:id);render();}
+function mxMode_(v){mxMode=v;render();}
+function mxSortBy(k){if(mxSort===k)mxDir=-mxDir;else{mxSort=k;mxDir=k==='n'?1:-1;}render();}
+function mxPlayerRows(m){
+  var st=[],sb=[],dn=[];
+  (m.pl||[]).forEach(function(p,i){var o={p:p,i:i};if(p.s)st.push(o);else if((p.o||0)>(p.i||0))sb.push(o);else dn.push(o);});
+  return {st:st,sb:sb,dn:dn};
+}
+function mxDetail(m){
+  var g=mxPlayerRows(m);
+  function tr(o){
+    var p=o.p,dk=Math.max(0,(p.o||0)-(p.i||0)),durum=p.s?(p.o<90?'İlk 11, '+p.o+'\'de çıktı':'İlk 11'):'Yedek, '+p.i+'\'de girdi';
+    return '<tr><td>'+esc(p.n)+'</td><td>'+durum+'</td><td>'+dk+'</td><td>'+(p.g||0)+'</td><td><input type="number" min="0" max="9" value="'+(p.a||0)+'" style="width:56px" aria-label="Asist '+esc(p.n)+'" onchange="setAst(\''+m.id+'\','+o.i+',this.value)"></td><td>'+(p.y||0)+'</td></tr>';
+  }
+  var rows=g.st.concat(g.sb).map(tr).join('');
+  return '<div class="tw" style="margin-top:12px"><table class="tb" style="min-width:520px"><thead><tr><th>Oyuncu</th><th>Durum</th><th>Dk</th><th>Gol</th><th>Asist</th><th>Sarı</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<p class="dim" style="margin:6px 0 0">Kaynak: TFF. Asist bilgisini TFF yayınlamaz, buradan elle girebilirsin.</p>';
+}
+function mxList(){
+  var ms=(db.matches||[]).slice().sort(function(a,b){return a.d<b.d?1:-1;});
+  return '<div class="list">'+ms.map(function(m){
+    var c=mResCls(m),cl=c==='G'?'c-ok':c==='M'?'c-bad':'c-warn',on=mxSel===m.id;
+    return '<button class="item" onclick="mxGo(\''+m.id+'\')" aria-expanded="'+on+'"><div><b>'+esc(mTitle(m))+'</b><br><span>'+trDate(m.d)+'</span></div><span><b style="font-size:20px;color:var(--ink)">'+mScore(m)+'</b> <span class="chip '+cl+'">'+c+'</span></span></button>'+(on?'<div style="padding:4px 2px 14px;border-bottom:1px solid var(--line)">'+mxDetail(m)+'</div>':'');
+  }).join('')+'</div>';
+}
+function mxTable(){
+  var rows=db.athletes.map(function(a){var t=mStat(a).t;return {a:a,n:a.n,m:t.m,s:t.s,min:t.min,g:t.g,as:t.a,y:t.y};}).filter(function(r){return r.m>0;});
+  rows.sort(function(x,y){var u=x[mxSort],v=y[mxSort];var c=mxSort==='n'?String(u).localeCompare(String(v),'tr'):(u-v);return (c*mxDir)||x.n.localeCompare(y.n,'tr');});
+  var th=function(k,l){return '<th><button class="item" style="padding:0;border:0;font-weight:600;color:var(--muted);display:inline" onclick="mxSortBy(\''+k+'\')">'+l+(mxSort===k?(mxDir>0?' ▲':' ▼'):'')+'</button></th>';};
+  return '<div class="tw"><table class="tb" style="min-width:420px"><thead><tr>'+th('n','Sporcu')+th('m','Maç')+th('s','İlk 11')+th('min','Dk')+th('g','Gol')+th('as','Asist')+th('y','Sarı')+'</tr></thead><tbody>'+
+    rows.map(function(r){return '<tr><td>'+esc(r.n)+'</td><td>'+r.m+'</td><td>'+r.s+'</td><td>'+r.min+'</td><td>'+r.g+'</td><td>'+r.as+'</td><td>'+r.y+'</td></tr>';}).join('')+'</tbody></table></div>'+
+    (rows.length?'':'<p class="dim">Henüz maç verisi olan sporcu yok.</p>');
+}
+function vMatches(){
+  var ms=db.matches||[];
+  if(!ms.length)return '<h1>Maçlar</h1><div class="empty"><p>Henüz maç verisi yok.</p></div>';
+  var w=0,d=0,l=0;ms.forEach(function(m){var c=mResCls(m);if(c==='G')w++;else if(c==='M')l++;else d++;});
+  var gf=0,ga=0;ms.forEach(function(m){gf+=m.gf;ga+=m.ga;});
+  return '<h1>Maçlar</h1><p class="sub">'+ms.length+' maç · '+w+' galibiyet, '+d+' beraberlik, '+l+' mağlubiyet · averaj '+gf+'-'+ga+'</p>'+
+    '<div class="row" style="margin-bottom:8px"><button class="btn small'+(mxMode==='list'?'':' ghost')+'" onclick="mxMode_(\'list\')">Maçlar</button><button class="btn small'+(mxMode==='table'?'':' ghost')+'" onclick="mxMode_(\'table\')">Sporcu tablosu</button></div>'+
+    (mxMode==='list'?mxList():mxTable());
+}
+var _rdMx=render;
+render=function(){
+  if(ROLE==='coach'&&view==='matches'){document.getElementById('app').innerHTML=vMatches();if(typeof setNav==='function')setNav();return;}
+  _rdMx();
+};
+var _snMx=setNav;
+setNav=function(){_snMx();var b=document.getElementById('n-matches');if(b){if(view==='matches')b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}};
 
 // ---- Uygulama olarak yükleme (PWA)
 var DEFERRED=null;
