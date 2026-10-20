@@ -2971,7 +2971,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792522130;
+var BUILD_ID=1792522401;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3381,7 +3381,7 @@ var meSec='home';
   '#mndr .mg{padding:14px 18px 4px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}'+
   '#mndr button.mi{display:block;width:100%;text-align:left;background:none;border:0;border-left:4px solid transparent;color:var(--ink);padding:12px 18px;font-size:16px}'+
   '#mndr button.mi[aria-current="page"]{border-left-color:var(--accent);background:var(--bg);font-weight:600}'+
-  '.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:16px 0}'+
+  '.hgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}.hgrid>.hcard:last-child:nth-child(odd){grid-column:1/-1}.hwide{display:block;width:100%;margin:0 0 16px}@media(min-width:700px){.hgrid{grid-template-columns:repeat(3,1fr)}.hgrid>.hcard:last-child:nth-child(odd){grid-column:auto}.hgrid>.hcard:last-child:nth-child(3n+1){grid-column:1/-1}.hgrid>.hcard:last-child:nth-child(3n+2){grid-column:span 2}}'+
   '.hcard{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);padding:14px;text-align:left;border-radius:12px;font:inherit}.hcard b{display:block;font-size:26px;line-height:1.2}.hcard span{font-size:13px;color:var(--muted)}'+
   '.hero{border:1.5px solid var(--ink);border-radius:14px;padding:22px 18px;margin:4px 0 6px;background:linear-gradient(135deg,var(--surface),var(--bg))}.hero small{letter-spacing:.2em;color:var(--accent);font-weight:700}.hero h1{margin:6px 0 4px}';
   document.head.appendChild(st);
@@ -3457,12 +3457,24 @@ function mnGo(k){
 // Antrenör ve hoca açılış sayfası
 function vHome(){
   var h='<div class="hero"><small>FETHİYESPOR</small><h1>U19 Performans Paneli</h1><p class="sub" style="margin:0">'+trDate(today())+'</p></div>';
-  var cs=[];
+  var cs=[],act=db.athletes.filter(function(a){return !a.arch;});
   cs.push(['athletes',db.athletes.length,'Sporcu']);
-  if(mnCan('survey'))cs.push(['inbox',unseenN(),'Bekleyen ağrı bildirimi']);
+  if(mnCan('survey')){
+    var td=today(),seen={};SV().forEach(function(x){if(x.d===td)seen[x.a]=1;});
+    cs.push(['inbox',Object.keys(seen).length+'/'+db.athletes.length,'Bugün anket dolduran']);
+    cs.push(['inbox',unseenN(),'Bekleyen ağrı bildirimi']);
+  }
+  if(mnCan('load')){
+    var hi=0;db.athletes.forEach(function(a){var e=ewma(a.id,'td');if(e&&e.r!=null&&e.n>=28&&e.r>1.5)hi++;});
+    cs.push(['load',hi,'Yüksek yük riski (ACWR > 1,5)']);
+  }
+  if(mnCan('inj')){cs.push(['athletes',db.athletes.filter(function(a){return isInj(a);}).length,'Aktif sakatlık']);}
   if(mnCan('gps')){var ds=db.gps.map(function(g){return g.d;}).sort();var ld=ds.length?ds[ds.length-1]:null;cs.push([STAFF?'gpsday':'gpsup',ld?trDate(ld):'-',STAFF?'Son GPS günü':'Son GPS günü, veri yükle']);}
-  if(mnCan('matches')&&(db.matches||[]).length){var lm=db.matches.slice().sort(function(x,y){return x.d<y.d?1:-1})[0];cs.push(['matches',mScore(lm),'Son maç: '+(lm.opp||'')]);}
   h+='<div class="hgrid">'+cs.map(function(c){return '<button type="button" class="hcard" onclick="mnGo(\''+c[0]+'\')"><b>'+esc(String(c[1]))+'</b><span>'+esc(c[2])+'</span></button>';}).join('')+'</div>';
+  if(mnCan('matches')&&(db.matches||[]).length){
+    var lm=db.matches.slice().sort(function(x,y){return x.d<y.d?1:-1})[0],rc=mResCls(lm),cl=rc==='G'?'c-ok':rc==='M'?'c-bad':'c-warn';
+    h+='<button type="button" class="hcard hwide" onclick="mnGo(\'matches\')"><span>Son maç, '+trDate(lm.d)+'</span><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:4px"><b style="font-size:18px">'+esc(mTitle(lm))+'</b><b>'+mScore(lm)+' <span class="chip '+cl+'">'+rc+'</span></b></div></button>';
+  }
   h+='<p class="dim">Sol üstteki üç çizgi düğmesinden tüm bölümlere ulaşabilirsin.</p>';
   return h;
 }
