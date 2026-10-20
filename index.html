@@ -2566,14 +2566,25 @@ vAthletes=function(){
   if(i>-1&&j>i)h=h.slice(0,i)+h.slice(e>j?e:j);
   return h;
 };
+var _ttSt=txToggle;
+txToggle=function(){if(view==='testup'){txReset();render();return;}return _ttSt();};
+function vTestUp(){
+  var h='<h1>Test Excel aktarma</h1><p class="sub">Test dosyalarını seç, tanınan düzeni ve tarihi kontrol et, onayla.</p>'+txPanel();
+  var by={};db.records.forEach(function(x){(by[x.d]=by[x.d]||{})[x.a]=1;});
+  var ds=Object.keys(by).sort().reverse().slice(0,10);
+  h+='<div class="grp"><h2>Son test günleri</h2>'+(ds.length?'<div class="list">'+ds.map(function(d){return '<div class="item" style="cursor:default"><div><b>'+trDate(d)+'</b></div><span>'+Object.keys(by[d]).length+' sporcu</span></div>';}).join('')+'</div>':'<p class="dim">Henüz test verisi yok.</p>')+'</div>';
+  h+='<div class="grp"><h2>Elle giriş</h2><p class="dim" style="margin-top:0">Tek bir sporcunun değerini hızlıca girmek istersen:</p><button class="btn ghost" onclick="go(\'entry\')">Tek sporcu için elle gir</button></div>';
+  return h;
+}
+var _veSt=vEntry;
+vEntry=function(){return '<button class="back" onclick="go(\'testup\')">Test Excel aktarmaya dön</button>'+_veSt().replace('<h1>Test girişi</h1>','<h1>Elle test girişi</h1>');};
 function vTools(){
   var has=db.athletes.length>0;
   var h='<h1>Veri ve araçlar</h1><p class="sub">Veri girişi, düzenleme ve dışa aktarma</p>';
   h+='<div class="grp"><h2>Veri girişi</h2><div class="row" style="margin:10px 0 8px">'+
-    '<button class="btn ghost" onclick="go(\'entry\')">Test girişi</button>'+
-    '<button class="btn ghost" onclick="txToggle()">'+(txOpen?'Excel aktarımını kapat':'Excel aktar')+'</button>'+
+    '<button class="btn ghost" onclick="go(\'testup\')">Test Excel aktarma</button>'+
     (has?'<button class="btn ghost" onclick="posToggle()">'+(posOpen?'Pozisyonları kapat':'Pozisyonları düzenle')+'</button>':'')+'</div>'+
-    (txOpen?txPanel():'')+(posOpen&&has?posPanel():'')+'</div>';
+    (posOpen&&has?posPanel():'')+'</div>';
   if(has)h+='<div class="grp"><h2>Dışa aktar</h2><div class="row" style="margin:10px 0 8px"><button class="btn ghost" onclick="testsCsv()">Testleri indir (CSV)</button><button class="btn ghost" onclick="backupJson()">Yedek indir</button><button class="btn ghost" onclick="inviteCsv()">Davet kodlarını indir</button></div></div>';
   return h;
 }
@@ -2972,7 +2983,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792523579;
+var BUILD_ID=1792524771;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3373,6 +3384,7 @@ var meSec='home';
   '#mnbtn{width:44px;height:44px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:0;flex:none}'+
   '#mnbtn i{display:block;width:20px;height:2px;background:var(--ink);border-radius:2px}'+
   '#mnttl{font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}'+
+  '@media(max-width:700px){#mnttl{max-width:calc(100vw - 290px)}}'+
   '#topbar{z-index:31;top:max(4px,env(safe-area-inset-top))}'+
   '#mnov{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:40;display:none}#mnov.on{display:block}'+
   '#mndr{position:fixed;top:0;bottom:0;left:0;width:min(84vw,310px);background:var(--surface);border-right:1.5px solid var(--ink);z-index:41;transform:translateX(-102%);transition:transform .2s;overflow-y:auto;padding:14px 0 24px;visibility:hidden}'+
@@ -3398,7 +3410,7 @@ function mnItems(){
   return [
     {t:'',i:[['home','Ana sayfa']]},
     {t:'Sporcular',i:[['athletes','Sporcu listesi'],['team','Sporcu karşılaştırma','tests']]},
-    {t:'Performans',i:[['entry','Test girişi','!'],['load','Yük ve risk','load'],['matches','Maçlar','matches'],['hiit','HIIT hesaplama','tests']]},
+    {t:'Performans',i:[['testup','Test Excel aktarma','!'],['load','Yük ve risk','load'],['matches','Maçlar','matches'],['hiit','HIIT hesaplama','tests']]},
     {t:'GPS',i:[['gpsup','Veri yükle','!'],['gpsday','Seans özeti','gps'],['gpsssg','Küçük oyunlar (SSG)','gps']]},
     {t:'Günlük takip',i:[['inbox','Gelen (anket ve ağrı)','survey'],['prog','Antrenman programı','prog']]},
     {t:'Yönetim',i:[['tools','Veri ve araçlar','!'],['staff','Hocalar','!']]}
@@ -3407,6 +3419,7 @@ function mnItems(){
 function mnCur(){
   if(ROLE==='athlete')return meSec;
   if(view==='profile'||view==='prev')return 'athletes';
+  if(view==='entry')return 'testup';
   if(view==='gps')return gpsMode==='ssg'?'gpsssg':'gpsday';
   return view;
 }
@@ -3581,9 +3594,9 @@ var _vtCmp=vTeam;
 vTeam=function(){return _vtCmp().replace('<h1>Takım</h1>','<h1>Sporcu karşılaştırma</h1>');};
 var _rdMn=render;
 render=function(){
-  if(STAFF&&(view==='gpsup'||view==='tools'))view='home';
-  if(ROLE==='coach'&&(view==='home'||view==='gpsup'||view==='tools')){
-    document.getElementById('app').innerHTML=view==='home'?vHome():view==='tools'?vTools():vGpsUp();
+  if(STAFF&&(view==='gpsup'||view==='tools'||view==='testup'))view='home';
+  if(ROLE==='coach'&&(view==='home'||view==='gpsup'||view==='tools'||view==='testup')){
+    document.getElementById('app').innerHTML=view==='home'?vHome():view==='tools'?vTools():view==='testup'?vTestUp():vGpsUp();
     if(typeof setNav==='function')setNav();
   }else _rdMn.apply(this,arguments);
   mnBuild();
