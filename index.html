@@ -2983,7 +2983,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792526521;
+var BUILD_ID=1792526687;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3391,7 +3391,7 @@ var meSec='home',mnExp={};
   '#mndr.on{transform:none;visibility:visible}'+
   '@media(prefers-reduced-motion:reduce){#mndr{transition:none}}'+
   '#mndr .mh{padding:6px 18px 12px;font-weight:700;letter-spacing:.04em}#mndr .mh small{display:block;color:var(--muted);font-weight:500;letter-spacing:0}'+
-  '#mndr .mg{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:0;border-top:1px solid var(--line);text-align:left;padding:14px 18px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:4px}#mndr .mg i{font-style:normal;font-size:14px}#mndr button.mi.sub{padding-left:30px}'+
+  '#mndr .mg{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:0;border-top:1px solid var(--line);text-align:left;padding:14px 18px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:4px}#mndr .mg i{font-style:normal;font-size:14px}#mndr button.mi.sub{padding-left:30px}#mndr button.mi.sub2{padding-left:46px;font-size:15px}#mndr button.mi.subg{display:flex;justify-content:space-between;align-items:center}#mndr button.mi.subg i{font-style:normal;font-size:14px;color:var(--muted)}'+
   '#mndr button.mi{display:block;width:100%;text-align:left;background:none;border:0;border-left:4px solid transparent;color:var(--ink);padding:12px 18px;font-size:16px}'+
   '#mndr button.mi[aria-current="page"]{border-left-color:var(--accent);background:var(--bg);font-weight:600}'+
   '.hgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}.hgrid>.hcard:last-child:nth-child(odd){grid-column:1/-1}.hwide{display:block;width:100%;margin:0 0 16px}@media(min-width:700px){.hgrid{grid-template-columns:repeat(3,1fr)}.hgrid>.hcard:last-child:nth-child(odd){grid-column:auto}.hgrid>.hcard:last-child:nth-child(3n+1){grid-column:1/-1}.hgrid>.hcard:last-child:nth-child(3n+2){grid-column:span 2}}'+
@@ -3411,14 +3411,14 @@ function mnItems(){
     {t:'',i:[['home','Ana sayfa']]},
     {t:'Sporcular',i:[['athletes','Sporcu listesi']]},
     {t:'Testler',i:[['testup','Veri yükle','!'],['team','Testler','tests']]},
-    {t:'Yük ve risk',i:[['load','ACWR','load'],['loadtarget','Maç günü hedefi','load'],['loadweek','Haftalık yük','load']]},
-    {t:'GPS',i:[['gpsup','Veri yükle','!'],['gpsday','Seans özeti','gps'],['gpsssg','Küçük oyunlar (SSG)','gps']]},
+    {t:'GPS',i:[['gpsup','Veri yükle','!'],['sub','Yük ve risk','load',[['load','ACWR','load'],['loadtarget','Maç günü hedefi','load'],['loadweek','Haftalık yük','load']]],['gpsday','Seans özeti','gps'],['gpsssg','Küçük oyunlar (SSG)','gps']]},
     {t:'Günlük takip',i:[['inbox','Gelen (anket ve ağrı)','survey'],['prog','Antrenman programı','prog']]},
     {t:'Yönetim',i:[['tools','Veri ve araçlar','!'],['staff','Hocalar','!']]},
     {t:'Maç verileri',i:[['matches','Maçlar','matches']]}
   ];
 }
-function mnDup(l){var n=0;mnItems().forEach(function(g){g.i.forEach(function(x){if(x[1]===l&&mnCan(x[2]))n++;});});return n>1;}
+function mnLeaf(g){var o=[];g.i.forEach(function(x){if(x[3]){x[3].forEach(function(y){if(mnCan(y[2]))o.push(y);});}else if(mnCan(x[2]))o.push(x);});return o;}
+function mnDup(l){var n=0;mnItems().forEach(function(g){mnLeaf(g).forEach(function(x){if(x[1]===l)n++;});});return n>1;}
 function mnCur(){
   if(ROLE==='athlete')return meSec;
   if(view==='profile'||view==='prev')return 'athletes';
@@ -3442,10 +3442,18 @@ function mnBuild(){
   try{document.body.classList.add('hasmenu');}catch(e){}
   var cur=mnCur(),ttl='',h='<div class="mh">FETHİYESPOR U19<small>'+(ROLE==='athlete'?'Sporcu paneli':STAFF?'Hoca paneli':'Antrenör paneli')+'</small></div>';
   mnItems().forEach(function(g,gi){
-    var its=g.i.filter(function(x){return mnCan(x[2]);});
+    var its=mnLeaf(g);
     if(!its.length)return;
     var hasCur=its.some(function(x){return x[0]===cur;}),ex=!g.t||(mnExp[g.t]!==undefined?mnExp[g.t]:hasCur),body='';
-    its.forEach(function(x){var on=x[0]===cur;if(on)ttl=(g.t&&mnDup(x[1]))?g.t+' · '+x[1]:x[1];body+='<button type="button" class="mi'+(g.t?' sub':'')+'"'+(on?' aria-current="page"':'')+' onclick="mnGo(\''+x[0]+'\')">'+x[1]+'</button>';});
+    function btn(x,cls){var on=x[0]===cur;if(on)ttl=(g.t&&mnDup(x[1]))?g.t+' · '+x[1]:x[1];return '<button type="button" class="mi'+cls+'"'+(on?' aria-current="page"':'')+' onclick="mnGo(\''+x[0]+'\')">'+x[1]+'</button>';}
+    g.i.forEach(function(x,si){
+      if(x[3]){
+        var ch=x[3].filter(function(y){return mnCan(y[2]);});if(!ch.length)return;
+        var key=g.t+'/'+x[1],hc=ch.some(function(y){return y[0]===cur;}),ex2=mnExp[key]!==undefined?mnExp[key]:hc;
+        body+='<button type="button" class="mi sub subg" data-g="'+gi+'" data-s="'+si+'" aria-expanded="'+(ex2?'true':'false')+'" onclick="mnTogS('+gi+','+si+')"><span>'+x[1]+'</span><i aria-hidden="true">'+(ex2?'▾':'▸')+'</i></button>';
+        if(ex2)ch.forEach(function(y){body+=btn(y,' sub2');});
+      }else if(mnCan(x[2]))body+=btn(x,g.t?' sub':'');
+    });
     if(g.t)h+='<button type="button" class="mg" data-g="'+gi+'" aria-expanded="'+(ex?'true':'false')+'" onclick="mnTog('+gi+')"><span>'+g.t+'</span><i aria-hidden="true">'+(ex?'▾':'▸')+'</i></button>';
     if(ex)h+=body;
   });
@@ -3455,9 +3463,15 @@ function mnBuild(){
 }
 function mnTog(gi){
   var g=mnItems()[gi];if(!g||!g.t)return;
-  var cur=mnCur(),its=g.i.filter(function(x){return mnCan(x[2]);}),hasCur=its.some(function(x){return x[0]===cur;});
+  var cur=mnCur(),its=mnLeaf(g),hasCur=its.some(function(x){return x[0]===cur;});
   var ex=mnExp[g.t]!==undefined?mnExp[g.t]:hasCur;mnExp[g.t]=!ex;
   mnBuild();var b=document.querySelector('#mndr [data-g="'+gi+'"]');if(b)b.focus();
+}
+function mnTogS(gi,si){
+  var g=mnItems()[gi],x=g&&g.i[si];if(!x||!x[3])return;
+  var cur=mnCur(),key=g.t+'/'+x[1],hc=x[3].some(function(y){return mnCan(y[2])&&y[0]===cur;});
+  var ex=mnExp[key]!==undefined?mnExp[key]:hc;mnExp[key]=!ex;
+  mnBuild();var b=document.querySelector('#mndr [data-g="'+gi+'"][data-s="'+si+'"]');if(b)b.focus();
 }
 function mnToggle(){var dr=document.getElementById('mndr');if(dr.classList.contains('on'))mnClose(true);else mnOpen();}
 function mnOpen(){
