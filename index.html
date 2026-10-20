@@ -2983,7 +2983,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792529520;
+var BUILD_ID=1792531281;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3317,7 +3317,7 @@ chrome=function(){
   Object.keys(h).forEach(function(k){var b=document.getElementById('n-'+k);if(b)b.style.display=(STAFF&&!STP[h[k]])?'none':'';});
   var bs=document.getElementById('n-staff');if(bs)bs.style.display=STAFF?'none':'';
 };
-var VPERM={load:'load',gps:'gps',prog:'prog',inbox:'survey',team:'tests',matches:'matches',hiit:'prog',entry:'x',prev:'x',staff:'x'};
+var VPERM={load:'load',gps:'gps',prog:'prog',inbox:'survey',team:'tests',matches:'matches',hiit:'prog',invites:'x',entry:'x',prev:'x',staff:'x'};
 function stRpc(id,perms,on){return SBC.rpc('set_staff',{target:id,p:perms,enable:on});}
 async function loadStaff(){
   STLOAD=true;
@@ -3413,7 +3413,7 @@ function mnItems(){
     {t:'Testler',i:[['testup','Veri yükle','!'],['team','Testler','tests']]},
     {t:'GPS',i:[['gpsup','Veri yükle','!'],['gpsday','GPS verileri','gps'],['load','ACWR','load'],['loadtarget','Günlük hedef','load'],['loadweek','Haftalık hedef','load'],['gpsssg','Küçük oyunlar (SSG)','gps']]},
     {t:'Antrenman ve takip',i:[['inbox','Gelen (anket ve ağrı)','survey'],['prog','Antrenman programı','prog']]},
-    {t:'Yönetim',i:[['tools','Veri ve araçlar','!'],['staff','Hocalar','!']]},
+    {t:'Sistem',i:[['staff','Hocalar','!'],['invites','Davet kodları','!']]},
     {t:'Maç verileri',i:[['matches','Maçlar','matches']]}
   ];
 }
@@ -3619,7 +3619,22 @@ vMe=function(){
 };
 
 var _vtCmp=vTeam;
-vTeam=function(){return _vtCmp().replace('<h1>Takım</h1>','<h1>Testler</h1>');};
+vTeam=function(){
+  var h=_vtCmp().replace('<h1>Takım</h1>','<h1>Testler</h1>');
+  if(!STAFF&&ROLE==='coach'&&db.athletes.length)h=h.replace('<h1>Testler</h1>','<h1>Testler</h1><div class="row" style="margin:6px 0 10px"><button class="btn ghost small" onclick="testsCsv()">Testleri indir (CSV)</button></div>');
+  return h;
+};
+function vInvites(){
+  var l=db.athletes.slice().sort(byname);
+  var h='<h1>Davet kodları</h1><p class="sub">Her sporcuya yalnızca kendi kodunu gönder. Kod bir kez çalışır.</p>';
+  if(!l.length)return h+'<p class="dim">Henüz sporcu yok.</p>';
+  h+='<div class="row" style="margin:6px 0 12px"><button class="btn ghost" onclick="inviteCsv()">Kodları indir (CSV)</button></div><div class="grp">';
+  h+=l.map(function(a){
+    var r=a.uid?'<span class="chip c-ok">Hesap bağlı</span>':(a.invite?'<b class="num" style="letter-spacing:.05em">'+esc(a.invite)+'</b> <button class="btn small ghost" onclick="copyInvite(\''+a.id+'\')">Kopyala</button>':'<span class="dim">Kod yükleniyor</span>');
+    return '<div class="row" style="justify-content:space-between;border-bottom:1px solid var(--line);padding:8px 0"><span>'+esc(a.n)+' <span class="dim">'+esc(a.p||'')+'</span></span><span>'+r+'</span></div>';
+  }).join('')+'</div>';
+  return h;
+}
 var _vlYk=vLoad;
 vLoad=function(){
   showImp=false;
@@ -3669,9 +3684,9 @@ function gpsPdf(){
 }
 var _rdMn=render;
 render=function(){
-  if(STAFF&&(view==='gpsup'||view==='tools'||view==='testup'))view='home';
-  if(ROLE==='coach'&&(view==='home'||view==='gpsup'||view==='tools'||view==='testup')){
-    document.getElementById('app').innerHTML=view==='home'?vHome():view==='tools'?vTools():view==='testup'?vTestUp():vGpsUp();
+  if(STAFF&&(view==='gpsup'||view==='invites'||view==='testup'))view='home';
+  if(ROLE==='coach'&&(view==='home'||view==='gpsup'||view==='invites'||view==='testup')){
+    document.getElementById('app').innerHTML=view==='home'?vHome():view==='invites'?vInvites():view==='testup'?vTestUp():vGpsUp();
     if(typeof setNav==='function')setNav();
   }else _rdMn.apply(this,arguments);
   mnBuild();
