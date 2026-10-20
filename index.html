@@ -2983,7 +2983,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792531415;
+var BUILD_ID=1792531704;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3690,6 +3690,32 @@ render=function(){
     if(typeof setNav==='function')setNav();
   }else _rdMn.apply(this,arguments);
   mnBuild();
+};
+
+
+// ---- Maçlar: sporcu tablosu PDF
+function mxRows(){
+  var rows=db.athletes.map(function(a){var t=mStat(a).t;return {a:a,n:a.n,m:t.m,s:t.s,min:t.min,g:t.g,as:t.a,y:t.y};}).filter(function(r){return r.m>0;});
+  rows.sort(function(x,y){var u=x[mxSort],v=y[mxSort];var c=mxSort==='n'?String(u).localeCompare(String(v),'tr'):(u-v);return (c*mxDir)||x.n.localeCompare(y.n,'tr');});
+  return rows;
+}
+function mxRep(){
+  var rows=mxRows(),ms=db.matches||[],w=0,d=0,l=0;
+  ms.forEach(function(m){var c=mResCls(m);if(c==='G')w++;else if(c==='M')l++;else d++;});
+  return RS+'<style>.r.mx{padding:26px 22px}.r.mx h1{font-size:30px}.r.mx th,.r.mx td{padding:4px 3px;font-size:11px}.r.mx .ft{margin-top:12px}</style><div class="r mx"><h1>Maç verileri</h1><div class="m">FETHİYESPOR U19 · '+trDate(today())+' · '+ms.length+' maç · '+w+' galibiyet, '+d+' beraberlik, '+l+' mağlubiyet</div>'+
+    '<table style="margin-top:12px"><thead><tr><th>Sporcu</th><th>Maç</th><th>İlk 11</th><th>Dk</th><th>Gol</th><th>Asist</th><th>Sarı</th></tr></thead><tbody>'+
+    rows.map(function(r){return '<tr><td>'+esc(r.n)+'</td><td>'+r.m+'</td><td>'+r.s+'</td><td>'+r.min+'</td><td>'+r.g+'</td><td>'+r.as+'</td><td>'+r.y+'</td></tr>';}).join('')+'</tbody></table>'+
+    '<div class="ft">Kaynak: TFF. Dakikalar ilk 11 ve oyuncu değişikliklerinden hesaplanır (90 dk üzerinden). Asist bilgisi elle girilir. FETHİYESPOR U19 performans paneli.</div></div>';
+}
+function mxPdf(){
+  if(!mxRows().length){toast('PDF için maç verisi yok.');return;}
+  makePdf(mxRep(),'Mac-verileri-'+today()+'.pdf');
+}
+var _vmPdf=vMatches;
+vMatches=function(){
+  var h=_vmPdf();
+  if(mxMode==='table'&&mxRows().length)h=h.replace('<div class="tw">','<div class="row" style="margin:0 0 8px"><button class="btn small" onclick="mxPdf()">PDF indir</button></div><div class="tw">');
+  return h;
 };
 
 // ---- Uygulama olarak yükleme (PWA)
