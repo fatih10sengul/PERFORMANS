@@ -2013,7 +2013,7 @@ async function boot(){
     if(ROLE==='coach'&&!STAFF){var _c1=collapseBody(),_c2=seedMatches(),_c3=seedProgram(),_c4=migHop(),_c5=seedHop(),_c6=seedJump(),_c7=seedJump2(),_c8=seedJump3(),_c9=undoMas();if(_c1||_c2||_c3||_c4||_c5||_c6||_c7||_c8||_c9)save();}
     if(ROLE==='athlete'){ME=db.athletes[0]?db.athletes[0].id:null;selA=ME;}
     authHide();chrome();
-    view=ROLE==='athlete'?'me':'athletes';
+    view=ROLE==='athlete'?'me':'home';
     render();
     setInterval(softRefresh,60000);
     document.addEventListener('visibilitychange',function(){if(!document.hidden)softRefresh();});
@@ -2971,7 +2971,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792498411;
+var BUILD_ID=1792499626;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3361,6 +3361,223 @@ setInterval(async function(){
     if(!a.data||a.data.role!=='staff'||JSON.stringify((b.data&&b.data.perms)||{})!==JSON.stringify(STP))location.reload();
   }catch(e){}
 },60000);
+
+// ---- Açılır menü, açılış sayfası, GPS yükleme akışı, sporcu bölümleri
+var meSec='home';
+(function(){
+  var st=document.createElement('style');
+  st.textContent='nav{display:none!important}body.side{padding-left:0!important}body.side #toast{left:50%!important;bottom:24px}'+
+  'body.hasmenu{padding-top:56px}'+
+  '#mnbar{position:fixed;top:0;left:0;right:0;height:52px;z-index:30;display:flex;align-items:center;gap:10px;padding:0 10px;padding-top:env(safe-area-inset-top,0);background:var(--bg);border-bottom:1.5px solid var(--line)}'+
+  '#mnbtn{width:44px;height:44px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:0;flex:none}'+
+  '#mnbtn i{display:block;width:20px;height:2px;background:var(--ink);border-radius:2px}'+
+  '#mnttl{font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}'+
+  '#topbar{z-index:31;top:max(4px,env(safe-area-inset-top))}'+
+  '#mnov{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:40;display:none}#mnov.on{display:block}'+
+  '#mndr{position:fixed;top:0;bottom:0;left:0;width:min(84vw,310px);background:var(--surface);border-right:1.5px solid var(--ink);z-index:41;transform:translateX(-102%);transition:transform .2s;overflow-y:auto;padding:14px 0 24px;visibility:hidden}'+
+  '#mndr.on{transform:none;visibility:visible}'+
+  '@media(prefers-reduced-motion:reduce){#mndr{transition:none}}'+
+  '#mndr .mh{padding:6px 18px 12px;font-weight:700;letter-spacing:.04em}#mndr .mh small{display:block;color:var(--muted);font-weight:500;letter-spacing:0}'+
+  '#mndr .mg{padding:14px 18px 4px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}'+
+  '#mndr button.mi{display:block;width:100%;text-align:left;background:none;border:0;border-left:4px solid transparent;color:var(--ink);padding:12px 18px;font-size:16px}'+
+  '#mndr button.mi[aria-current="page"]{border-left-color:var(--accent);background:var(--bg);font-weight:600}'+
+  '.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:16px 0}'+
+  '.hcard{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);padding:14px;text-align:left;border-radius:12px;font:inherit}.hcard b{display:block;font-size:26px;line-height:1.2}.hcard span{font-size:13px;color:var(--muted)}'+
+  '.hero{border:1.5px solid var(--ink);border-radius:14px;padding:22px 18px;margin:4px 0 6px;background:linear-gradient(135deg,var(--surface),var(--bg))}.hero small{letter-spacing:.2em;color:var(--accent);font-weight:700}.hero h1{margin:6px 0 4px}';
+  document.head.appendChild(st);
+})();
+function mnCan(c){if(!c)return true;if(c==='!')return !STAFF&&ROLE==='coach';if(!STAFF)return true;return !!STP[c];}
+function mnItems(){
+  if(ROLE==='athlete'){
+    var a=ath(ME),p=a?perm(a):{},it=[['home','Ana sayfa']];
+    if(p.prog)it.push(['prog','Programım']);if(p.survey)it.push(['survey','Günlük anket']);if(p.tests)it.push(['tests','Testlerim']);if(p.gps)it.push(['gps','GPS özetim']);
+    it.push(['matches','Maçlarım']);
+    return [{t:'',i:it}];
+  }
+  return [
+    {t:'',i:[['home','Ana sayfa']]},
+    {t:'Sporcular',i:[['athletes','Sporcu listesi'],['team','Takım karşılaştırması','tests']]},
+    {t:'Performans',i:[['entry','Test girişi','!'],['load','Yük ve risk','load'],['matches','Maçlar','matches'],['hiit','HIIT hesaplama','tests']]},
+    {t:'GPS',i:[['gpsup','Veri yükle','!'],['gpsday','Seans özeti','gps'],['gpsssg','Küçük oyunlar (SSG)','gps']]},
+    {t:'Günlük takip',i:[['inbox','Gelen (anket ve ağrı)','survey'],['prog','Antrenman programı','prog']]},
+    {t:'Yönetim',i:[['staff','Hocalar','!'],['backup','Veri yedeği','!']]}
+  ];
+}
+function mnCur(){
+  if(ROLE==='athlete')return meSec;
+  if(view==='profile'||view==='prev')return 'athletes';
+  if(view==='gps')return gpsMode==='ssg'?'gpsssg':'gpsday';
+  return view;
+}
+function mnBuild(){
+  if(!ROLE||ROLE==='none')return;
+  var bar=document.getElementById('mnbar');
+  if(!bar){
+    bar=document.createElement('div');bar.id='mnbar';
+    bar.innerHTML='<button id="mnbtn" type="button" aria-label="Menüyü aç" aria-expanded="false" aria-controls="mndr" onclick="mnToggle()"><i></i><i></i><i></i></button><span id="mnttl"></span>';
+    document.body.appendChild(bar);
+    var ov=document.createElement('div');ov.id='mnov';ov.onclick=function(){mnClose(true);};document.body.appendChild(ov);
+    var dr=document.createElement('aside');dr.id='mndr';dr.setAttribute('aria-label','Ana menü');document.body.appendChild(dr);
+    document.addEventListener('keydown',function(e){if(e.key==='Escape')mnClose(true);});
+  }
+  try{document.body.classList.add('hasmenu');}catch(e){}
+  var cur=mnCur(),ttl='',h='<div class="mh">FETHİYESPOR U19<small>'+(ROLE==='athlete'?'Sporcu paneli':STAFF?'Hoca paneli':'Antrenör paneli')+'</small></div>';
+  mnItems().forEach(function(g){
+    var its=g.i.filter(function(x){return mnCan(x[2]);});
+    if(!its.length)return;
+    if(g.t)h+='<div class="mg">'+g.t+'</div>';
+    its.forEach(function(x){var on=x[0]===cur;if(on)ttl=x[1];h+='<button type="button" class="mi"'+(on?' aria-current="page"':'')+' onclick="mnGo(\''+x[0]+'\')">'+x[1]+'</button>';});
+  });
+  h+='<div class="mg"></div><button type="button" class="mi" onclick="doSignOut()">Çıkış yap</button>';
+  document.getElementById('mndr').innerHTML=h;
+  document.getElementById('mnttl').textContent=ttl||'FETHİYESPOR U19';
+}
+function mnToggle(){var dr=document.getElementById('mndr');if(dr.classList.contains('on'))mnClose(true);else mnOpen();}
+function mnOpen(){
+  document.getElementById('mndr').classList.add('on');document.getElementById('mnov').classList.add('on');
+  var b=document.getElementById('mnbtn');b.setAttribute('aria-expanded','true');b.setAttribute('aria-label','Menüyü kapat');
+  var f=document.querySelector('#mndr button.mi[aria-current="page"]')||document.querySelector('#mndr button.mi');if(f)f.focus();
+}
+function mnClose(back){
+  var dr=document.getElementById('mndr');if(!dr)return;
+  var was=dr.classList.contains('on');
+  dr.classList.remove('on');document.getElementById('mnov').classList.remove('on');
+  var b=document.getElementById('mnbtn');b.setAttribute('aria-expanded','false');b.setAttribute('aria-label','Menüyü aç');
+  if(back&&was)b.focus();
+}
+function mnGo(k){
+  mnClose(false);
+  if(ROLE==='athlete'){meSec=k;render();window.scrollTo(0,0);return;}
+  if(k==='gpsday'){gpsMode='day';go('gps');return;}
+  if(k==='gpsssg'){gpsMode='ssg';go('gps');return;}
+  if(k==='backup'){backupJson();return;}
+  go(k);
+}
+
+// Antrenör ve hoca açılış sayfası
+function vHome(){
+  var h='<div class="hero"><small>FETHİYESPOR</small><h1>U19 Performans Paneli</h1><p class="sub" style="margin:0">'+trDate(today())+'</p></div>';
+  var cs=[];
+  cs.push(['athletes',db.athletes.length,'Sporcu']);
+  if(mnCan('survey'))cs.push(['inbox',unseenN(),'Bekleyen ağrı bildirimi']);
+  if(mnCan('gps')){var ds=db.gps.map(function(g){return g.d;}).sort();var ld=ds.length?ds[ds.length-1]:null;cs.push([STAFF?'gpsday':'gpsup',ld?trDate(ld):'-',STAFF?'Son GPS günü':'Son GPS günü, veri yükle']);}
+  if(mnCan('matches')&&(db.matches||[]).length){var lm=db.matches.slice().sort(function(x,y){return x.d<y.d?1:-1})[0];cs.push(['matches',mScore(lm),'Son maç: '+(lm.opp||'')]);}
+  if(mnCan('tests')){var td=db.records.map(function(r){return r.d;}).sort();cs.push(['team',td.length?trDate(td[td.length-1]):'-','Son test günü']);}
+  h+='<div class="hgrid">'+cs.map(function(c){return '<button type="button" class="hcard" onclick="mnGo(\''+c[0]+'\')"><b>'+esc(String(c[1]))+'</b><span>'+esc(c[2])+'</span></button>';}).join('')+'</div>';
+  h+='<p class="dim">Sol üstteki üç çizgi düğmesinden tüm bölümlere ulaşabilirsin.</p>';
+  return h;
+}
+
+// GPS: günlük veri yükleme akışı
+var gu=null;
+var GUK=['td','hsr','spr','pl','rs','acc','dec','hrv','hr','hml','vm','min'];
+function guMatch(name){
+  var tk=nTok(name);if(!tk.length)return {t:'none'};
+  var l=db.athletes.filter(function(a){return nMatch(tk,nTok(a.n));});
+  if(l.length===1)return {t:'ok',a:l[0]};
+  if(l.length>1){var ex=l.filter(function(a){return nTok(a.n).join(' ')===tk.join(' ');});if(ex.length===1)return {t:'ok',a:ex[0]};return {t:'amb'};}
+  return {t:'none'};
+}
+function guPrev(){
+  var mp=gu.map,ok=[],un={},amb={},bad=0,over=0,have={};
+  db.gps.forEach(function(g){have[g.a+'|'+g.d]=1;});
+  gu.rows.slice(1).forEach(function(r){
+    var nm=mp.ath>=0?String(r[mp.ath]||'').trim():'',d=mp.date>=0?pDate(r[mp.date]):gu.fdate;
+    if(!nm||!d){bad++;return;}
+    var x=guMatch(nm);
+    if(x.t==='ok'){ok.push({a:x.a,r:r,d:d});if(have[x.a.id+'|'+d])over++;}
+    else if(x.t==='amb')amb[nm]=1;else un[nm]=1;
+  });
+  return {ok:ok,un:Object.keys(un),amb:Object.keys(amb),bad:bad,over:over};
+}
+function guMap(k,v){gu.map[k]=parseInt(v,10);render();}
+function guDate(v){gu.fdate=v;render();}
+async function guRead(inp){
+  var f=inp.files[0];if(!f)return;
+  var nm=f.name.toLowerCase(),rows;
+  try{
+    if(/\.(xlsx|xlsm|xls)$/.test(nm)){
+      if(!window.XLSX)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+      var wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
+      rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:false,defval:''});
+    }else rows=parseCSV((await f.text()).replace(/^﻿/,''));
+  }catch(e){toast('Dosya okunamadı. .csv ya da .xlsx dene.');return;}
+  rows=rows.map(function(r){return r.map(function(c){return String(c==null?'':c);});}).filter(function(r){return r.some(function(c){return c.trim()!=='';});});
+  if(rows.length<2){toast('Dosyada veri satırı bulunamadı.');return;}
+  gu={rows:rows,map:guess(rows[0]),fdate:fnDate(f.name)||today(),name:f.name};render();
+}
+function guCancel(){gu=null;render();}
+function guDo(){
+  if(!gu)return;
+  var mp=gu.map,pv=guPrev();
+  if(!GUK.some(function(k){return mp[k]>=0;})){toast('En az bir yük sütunu seç.');return;}
+  if(!pv.ok.length){toast('Eşleşen sporcu yok.');return;}
+  var mx='';
+  pv.ok.forEach(function(x){
+    var g={id:uid(),a:x.a.id,d:x.d};
+    GUK.forEach(function(k){if(mp[k]>=0){var v=pNum(x.r[mp[k]]);if(v!=null)g[k]=v;}});
+    db.gps=db.gps.filter(function(y){return !(y.a===x.a.id&&y.d===x.d);});db.gps.push(g);
+    if(x.d>mx)mx=x.d;
+  });
+  var n=pv.ok.length,sk=pv.un.length+pv.amb.length;
+  gu=null;if(mx)gpsDate=mx;save();render();
+  toast(n+' sporcunun verisi yüklendi'+(sk?', '+sk+' isim eşleşmedi':''));
+}
+function guOpen(d){gpsDate=d;gpsMode='day';go('gps');}
+function vGpsUp(){
+  var h='<h1>GPS veri yükle</h1><p class="sub">Günlük GPS dosyasını seç, eşleşmeyi kontrol et, onayla.</p>';
+  h+='<div class="form"><label for="gu-f">Dosya (.csv ya da .xlsx)</label><input id="gu-f" type="file" accept=".csv,.xlsx,.xls,.xlsm,text/csv" onchange="guRead(this)">';
+  if(gu){
+    var pv=guPrev(),mp=gu.map;
+    h+='<label for="gu-d">Tarih (dosyada tarih sütunu yoksa bu kullanılır)</label><input id="gu-d" type="date" value="'+esc(gu.fdate)+'" onchange="guDate(this.value)">';
+    h+='<div class="alert" style="margin-top:14px"><b>'+esc(gu.name||'Dosya')+':</b> '+(gu.rows.length-1)+' satır. <b>'+pv.ok.length+'</b> sporcu eşleşti'+(pv.over?', '+pv.over+' kaydın üzerine yazılacak':'')+'.'+
+      (pv.un.length?'<br>Eşleşmeyen (atlanacak): '+pv.un.map(esc).join(', '):'')+
+      (pv.amb.length?'<br>Birden fazla sporcuya benzeyen (atlanacak): '+pv.amb.map(esc).join(', '):'')+
+      (pv.bad?'<br>Adı ya da tarihi eksik satır: '+pv.bad:'')+'</div>';
+    h+='<details style="margin-top:10px"><summary>Sütun eşleşmesi (otomatik bulundu, gerekirse değiştir)</summary><div class="map">';
+    var N={ath:'Sporcu adı',date:'Tarih',td:'Total Distance',hsr:'HSR',spr:'Sprint',pl:'Player load',rs:'Repeated Sprint (RS)',acc:'ACC',dec:'DEC',hrv:'HRV (rMSSD)',hr:'Avg HR',hml:'HML Distance',vm:'Max Speed (km/h)',min:'Süre (dakika)'};
+    Object.keys(N).forEach(function(k){h+='<div><label for="gm-'+k+'">'+N[k]+'</label><select id="gm-'+k+'" onchange="guMap(\''+k+'\',this.value)"><option value="-1">Yok</option>'+gu.rows[0].map(function(x,i){return '<option value="'+i+'"'+(mp[k]===i?' selected':'')+'>'+esc(x)+'</option>';}).join('')+'</select></div>';});
+    h+='</div></details>';
+    h+='<div class="row" style="margin-top:16px"><button class="btn" onclick="guDo()"'+(pv.ok.length?'':' disabled')+'>Onayla ve yükle</button><button class="btn ghost" onclick="guCancel()">Vazgeç</button></div>';
+  }
+  h+='<p class="dim" style="margin:12px 0 0">Aynı sporcu ve tarih tekrar yüklenirse eski kaydın üzerine yazılır. Eşleşmeyen isimler atlanır, yeni sporcu açılmaz.</p></div>';
+  var by={};db.gps.forEach(function(g){by[g.d]=(by[g.d]||0)+1;});
+  var ds=Object.keys(by).sort().reverse().slice(0,10);
+  h+='<div class="grp"><h2>Son yüklenen günler</h2>'+(ds.length?'<div class="list">'+ds.map(function(d){return '<button class="item" onclick="guOpen(\''+d+'\')"><div><b>'+trDate(d)+'</b></div><span>'+by[d]+' sporcu</span></button>';}).join('')+'</div>':'<p class="dim">Henüz GPS verisi yüklenmedi.</p>')+'</div>';
+  return h;
+}
+
+// Sporcu ekranı: bölümlere ayır
+var _vmMn=vMe;
+vMe=function(){
+  var full=_vmMn();
+  if(!ath(ME)||full.indexOf('class="empty"')>-1&&full.indexOf('<div class="grp">')<0&&full.indexOf('Merhaba')<0)return full;
+  var parts=full.split('<div class="grp">'),top=parts.shift(),secs={};
+  parts.forEach(function(q){
+    var mm=q.match(/^<h2>([^<]*)<\/h2>/),t=mm?mm[1]:'';
+    var k=/^Programım/.test(t)?'prog':/^Günlük anket/.test(t)?'survey':/^Testlerim/.test(t)?'tests':/^GPS özetim/.test(t)?'gps':/^Maçlarım/.test(t)?'matches':null;
+    if(k)secs[k]='<div class="grp">'+q;
+  });
+  var ok=mnItems()[0].i.map(function(x){return x[0];});
+  if(ok.indexOf(meSec)<0)meSec='home';
+  if(meSec==='home'){
+    var sub={prog:'Bugünkü egzersizler',survey:'Anketini doldur',tests:'Son test sonuçların',gps:'Son 7 gün özeti',matches:'Maç istatistiklerin'};
+    var lab={prog:'Programım',survey:'Günlük anket',tests:'Testlerim',gps:'GPS özetim',matches:'Maçlarım'};
+    return top+'<div class="hgrid">'+Object.keys(lab).filter(function(k){return ok.indexOf(k)>-1;}).map(function(k){return '<button type="button" class="hcard" onclick="mnGo(\''+k+'\')"><b style="font-size:19px">'+lab[k]+'</b><span>'+sub[k]+'</span></button>';}).join('')+'</div>';
+  }
+  var a=ath(ME);
+  return '<h1 style="margin-bottom:0">'+esc(a.n.split(' ')[0])+'</h1>'+(secs[meSec]||'<div class="empty"><p>Bu bölüm için henüz veri yok.</p></div>');
+};
+
+var _rdMn=render;
+render=function(){
+  if(STAFF&&view==='gpsup')view='home';
+  if(ROLE==='coach'&&(view==='home'||view==='gpsup')){
+    document.getElementById('app').innerHTML=view==='home'?vHome():vGpsUp();
+    if(typeof setNav==='function')setNav();
+  }else _rdMn.apply(this,arguments);
+  mnBuild();
+};
 
 // ---- Uygulama olarak yükleme (PWA)
 var DEFERRED=null;
