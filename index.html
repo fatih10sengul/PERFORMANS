@@ -2983,7 +2983,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792525455;
+var BUILD_ID=1792525778;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3317,7 +3317,7 @@ chrome=function(){
   Object.keys(h).forEach(function(k){var b=document.getElementById('n-'+k);if(b)b.style.display=(STAFF&&!STP[h[k]])?'none':'';});
   var bs=document.getElementById('n-staff');if(bs)bs.style.display=STAFF?'none':'';
 };
-var VPERM={load:'load',gps:'gps',prog:'prog',inbox:'survey',team:'tests',matches:'matches',hiit:'tests',entry:'x',prev:'x',staff:'x'};
+var VPERM={load:'load',gps:'gps',prog:'prog',inbox:'survey',team:'tests',matches:'matches',hiit:'prog',entry:'x',prev:'x',staff:'x'};
 function stRpc(id,perms,on){return SBC.rpc('set_staff',{target:id,p:perms,enable:on});}
 async function loadStaff(){
   STLOAD=true;
@@ -3411,7 +3411,7 @@ function mnItems(){
     {t:'',i:[['home','Ana sayfa']]},
     {t:'Sporcular',i:[['athletes','Sporcu listesi']]},
     {t:'Testler',i:[['testup','Test Excel aktarma','!'],['team','Testler','tests']]},
-    {t:'Yük ve maç',i:[['load','Yük ve risk','load'],['hiit','HIIT hesaplama','tests'],['matches','Maçlar','matches']]},
+    {t:'Yük ve maç',i:[['load','Yük ve risk','load'],['matches','Maçlar','matches']]},
     {t:'GPS',i:[['gpsup','Veri yükle','!'],['gpsday','Seans özeti','gps'],['gpsssg','Küçük oyunlar (SSG)','gps']]},
     {t:'Günlük takip',i:[['inbox','Gelen (anket ve ağrı)','survey'],['prog','Antrenman programı','prog']]},
     {t:'Yönetim',i:[['tools','Veri ve araçlar','!'],['staff','Hocalar','!']]}
@@ -3421,6 +3421,7 @@ function mnCur(){
   if(ROLE==='athlete')return meSec;
   if(view==='profile'||view==='prev')return 'athletes';
   if(view==='entry')return 'testup';
+  if(view==='hiit')return 'prog';
   if(view==='gps')return gpsMode==='ssg'?'gpsssg':'gpsday';
   return view;
 }
