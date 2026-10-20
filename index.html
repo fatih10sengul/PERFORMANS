@@ -2983,7 +2983,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792531704;
+var BUILD_ID=1792532111;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3718,6 +3718,37 @@ vMatches=function(){
   return h;
 };
 
+
+// ---- Vücut haritası: yalnızca alt ekstremite, geliştirilmiş çizim
+var LREG={F:[['kasik',89,106,8,14],['quad',68,128,16,36]],B:[['kalca',70,44,22,26],['hamstring',68,128,16,36],['baldir',70,212,13,30]]};
+var _bsOld=bodySvg;
+bodySvg=function(v,mode,data){
+  var R=v==='F'?'R':'L',Lf=v==='F'?'L':'R';
+  var leg='M42 78 C38 105 44 140 52 168 C50 186 47 200 48 218 C49 238 56 250 59 262 L86 262 C87 244 92 232 92 214 C92 196 92 182 91 168 C94 140 98 110 99 78 Z';
+  var sock='M48 222 C49 240 56 250 59 262 L86 262 C87 250 91 240 92 222 Z';
+  var boot='M56 262 L88 262 L90 286 C98 288 102 294 100 300 L48 300 C46 290 52 286 54 282 Z';
+  var s='<svg viewBox="0 0 200 310" width="100%" role="img" aria-label="'+(v==='F'?'Ön':'Arka')+' alt ekstremite haritası" style="display:block;max-width:260px;margin:0 auto">'+
+   '<defs><linearGradient id="lgSkin" x1="0" x2="1"><stop offset="0" stop-color="#d9a982"/><stop offset=".5" stop-color="#ecc29c"/><stop offset="1" stop-color="#c99872"/></linearGradient></defs>';
+  [0,1].forEach(function(m){
+    s+='<g'+(m?' transform="translate(200 0) scale(-1 1)"':'')+'>'+
+     '<path d="'+leg+'" fill="url(#lgSkin)" stroke="#a9795a" stroke-width="1.2"/>'+
+     (v==='F'?'<path d="M58 168 C64 176 78 176 84 168" fill="none" stroke="#a9795a" stroke-width="1" opacity=".5"/><path d="M62 190 C66 232 70 250 72 258" fill="none" stroke="#a9795a" stroke-width="1" opacity=".35"/>':
+       '<path d="M70 168 C72 178 72 186 70 194" fill="none" stroke="#a9795a" stroke-width="1" opacity=".45"/><path d="M52 205 C56 225 58 240 60 255 M88 205 C86 225 84 240 84 255" fill="none" stroke="#a9795a" stroke-width="1" opacity=".3"/>')+
+     '<path d="'+sock+'" fill="#e8eef3" stroke="#9aa8b4" stroke-width="1"/><path d="M48 224 L92 224 M48 230 L92 230" stroke="#c0392b" stroke-width="2.4" fill="none"/>'+
+     '<path d="'+boot+'" fill="#23272e" stroke="#0e1114" stroke-width="1"/><path d="M56 292 L98 292" stroke="#6b7280" stroke-width="1.5"/>'+
+     '</g>';
+  });
+  s+='<path d="M40 0 L160 0 L166 86 L102 94 L100 58 L98 94 L34 86 Z" fill="#1d3b6e" stroke="#122648" stroke-width="1.2"/><path d="M40 0 L160 0 L161 12 L39 12 Z" fill="#c0392b" opacity=".9"/>';
+  (LREG[v]||[]).forEach(function(d){
+    [[d[1],R],[200-d[1],Lf]].forEach(function(p){
+      var k=v+d[0]+'_'+p[1],lab=regLabel(k);
+      var on=mode==='pick'?data[k]!=null:(data[k]||0)>0,op=mode==='pick'?(on?.38+data[k]/10*.4:.07):(on?.15+data[k]*.7:.03);
+      s+='<ellipse cx="'+p[0]+'" cy="'+d[2]+'" rx="'+d[3]+'" ry="'+d[4]+'" style="fill:var(--bad);fill-opacity:'+op.toFixed(2)+';stroke:'+(on?'var(--bad)':'rgba(255,255,255,.55)')+';stroke-width:1.2;stroke-dasharray:'+(on?'none':'3 2')+';'+(mode==='pick'?'cursor:pointer':'')+'"'+(mode==='pick'?' tabindex="0" role="button" aria-pressed="'+on+'" aria-label="'+esc(lab)+'" onclick="togglePain(\''+k+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();togglePain(\''+k+'\')}"':'')+'/>';
+      if(mode==='pick'&&on)s+='<circle cx="'+p[0]+'" cy="'+d[2]+'" r="5" style="fill:var(--bad);pointer-events:none"/>';
+    });
+  });
+  return s+'</svg>';
+};
 // ---- Uygulama olarak yükleme (PWA)
 var DEFERRED=null;
 function isStandalone(){return (window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true;}
