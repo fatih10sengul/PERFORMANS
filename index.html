@@ -109,6 +109,7 @@ nav button{font-size:14px;padding:15px 2px}
   <button id="n-inbox" onclick="go('inbox')">Gelen</button>
   <button id="n-team" onclick="go('team')">Takım</button>
   <button id="n-matches" onclick="go('matches')">Maçlar</button>
+  <button id="n-staff" onclick="go('staff')">Hocalar</button>
 </nav>
 
 <script>
@@ -1626,6 +1627,7 @@ render();
 // ===================================================================
 var SB_URL='https://ngxdlhapsawphgvqlxzf.supabase.co';
 var SB_KEY='sb_publishable_E__dzc1F7X0BLIpoghWk3Q_ChD3P5Nx';
+var STAFF=false,STP={};
 var SBC=null,ROLE=null,ME=null,SNAP={},SYNC={dirty:false,busy:false,timer:null,fail:0,last:null};
 
 // ---- Prototip güvenlik: toplu silme ve örnek veri gerçek sürümde kapalı
@@ -1864,7 +1866,7 @@ function showLogin(){
     '<p class="dim" style="margin:16px 0 0"><button class="back" style="margin:0;padding:0" onclick="authMode=\''+(up?'in':'up')+'\';showLogin()">'+(up?'Zaten hesabım var, giriş yap':'Sporcuyum, davet koduyla kayıt ol')+'</button></p></div>');
 }
 function showClaim(msg){
-  authBox('<p class="sub">Hesabın hazır. Antrenörünün verdiği davet kodunu gir.</p><div class="form"><label for="au-c">Davet kodu</label><input id="au-c" autocapitalize="off" autocomplete="off" placeholder="12 haneli kod"><div id="au-msg" class="au-msg bad" role="alert">'+esc(msg||'')+'</div><div class="row" style="margin-top:14px"><button class="btn" onclick="doClaim()">Devam et</button><button class="btn ghost" onclick="doSignOut()">Çıkış</button></div></div>');
+  authBox('<p class="sub">Hesabın hazır. Sporcuysan antrenörünün verdiği davet kodunu gir. Hocaysan antrenörün hesabını onaylayana kadar bekle, sonra uygulamayı yeniden aç.</p><div class="form"><label for="au-c">Davet kodu</label><input id="au-c" autocapitalize="off" autocomplete="off" placeholder="12 haneli kod"><div id="au-msg" class="au-msg bad" role="alert">'+esc(msg||'')+'</div><div class="row" style="margin-top:14px"><button class="btn" onclick="doClaim()">Devam et</button><button class="btn ghost" onclick="doSignOut()">Çıkış</button></div></div>');
 }
 function showFatal(msg){
   authBox('<div class="form"><p class="au-msg bad" style="display:block">'+esc(msg)+'</p><div class="row" style="margin-top:14px"><button class="btn" onclick="location.reload()">Yeniden dene</button><button class="btn ghost" onclick="doSignOut()">Çıkış</button></div></div>');
@@ -1994,6 +1996,12 @@ async function boot(){
     if(pr.error){showFatal('Hesap bilgisi alınamadı: '+trErr(pr.error));return;}
     if(!pr.data){showFatal('Hesap profili bulunamadı. Antrenörüne haber ver.');return;}
     ROLE=pr.data.role;
+    if(ROLE==='staff'){
+      var sa=await SBC.from('staff_access').select('perms').eq('user_id',uid0).maybeSingle();
+      if(sa.error){showFatal('Hoca izinleri alınamadı: '+trErr(sa.error));return;}
+      STP=(sa.data&&sa.data.perms)||{};STAFF=true;ROLE='coach';
+      save=function(){var n=Date.now();if(n-(save.t||0)<3000)return;save.t=n;SYNC.dirty=false;toast('Hoca hesabı salt okunur, değişiklik kaydedilmez.');loadAll().then(function(){render();}).catch(function(){});};
+    }
     if(ROLE==='none'){
       var pc=null;try{pc=localStorage.getItem('pp_pending_code');}catch(x){}
       if(pc){var rr=await SBC.rpc('claim_athlete',{code:pc});try{localStorage.removeItem('pp_pending_code');}catch(x){}
@@ -2002,7 +2010,7 @@ async function boot(){
       showClaim();return;
     }
     await loadAll();
-    if(ROLE==='coach'){var _c1=collapseBody(),_c2=seedMatches(),_c3=seedProgram(),_c4=migHop(),_c5=seedHop(),_c6=seedJump(),_c7=seedJump2(),_c8=seedJump3(),_c9=undoMas();if(_c1||_c2||_c3||_c4||_c5||_c6||_c7||_c8||_c9)save();}
+    if(ROLE==='coach'&&!STAFF){var _c1=collapseBody(),_c2=seedMatches(),_c3=seedProgram(),_c4=migHop(),_c5=seedHop(),_c6=seedJump(),_c7=seedJump2(),_c8=seedJump3(),_c9=undoMas();if(_c1||_c2||_c3||_c4||_c5||_c6||_c7||_c8||_c9)save();}
     if(ROLE==='athlete'){ME=db.athletes[0]?db.athletes[0].id:null;selA=ME;}
     authHide();chrome();
     view=ROLE==='athlete'?'me':'athletes';
@@ -2963,7 +2971,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792414204;
+var BUILD_ID=1792498411;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3203,7 +3211,7 @@ function mxWanted(){
   return o;
 }
 async function syncMx(){
-  if(!SBC||ROLE!=='coach'||MX.off||MX.busy||SYNC.busy)return;
+  if(!SBC||ROLE!=='coach'||STAFF||MX.off||MX.busy||SYNC.busy)return;
   MX.busy=true;
   try{
     if(!MX.snap){
@@ -3277,6 +3285,82 @@ function mxMine(){
 var _vmMx=vMe;
 vMe=function(){if(!MX.last&&!MX.fb){MX.fb=true;fetchMx().then(function(){MX.fb=false;});}
   var h=_vmMx();return h.indexOf('class="empty"')>-1&&h.indexOf('Sporcu kaydın')>-1?h:h+mxMine();};
+
+// ---- Hoca hesapları (salt okunur) ve yönetim ekranı
+var STCAT=[['tests','Testler'],['gps','GPS'],['load','Yük ve risk (ACWR)'],['survey','Anket ve wellness'],['inj','Sakatlık'],['matches','Maç verileri'],['prog','Antrenman programı']];
+var STL=null,STLOAD=false,STERR=null;
+(function(){
+  var st=document.createElement('style');
+  var hide=['delRec(','delInj(','delEx(','delDrill(','delAth(','addInj(','addEx(','addAthlete(','saveEntry(','saveSsg(','doImport(','markSeen(','markAll(','act(','editAth(','xlToggle(','inviteCsv(','resetInvite(','copyInvite(','setPerm(','setHide(','setAst(','setMx(','hiitSave(','backupJson(','setPhoto(','savePhoto(','txToggle(','setMin(','setMinTh(','setNorm(','setAdj(','setWkType(','tgSet(','setStage(','posToggle(',"'prev'","'entry'"];
+  st.textContent=hide.map(function(h){return 'body.ro [onclick*="'+h+'"],body.ro [onchange*="'+h+'"],body.ro [oninput*="'+h+'"]';}).join(',')+'{display:none!important}';
+  document.head.appendChild(st);
+})();
+var _ibSt=inviteBlock;
+inviteBlock=function(a){return STAFF?'':_ibSt(a);};
+var _chSt=chrome;
+chrome=function(){
+  _chSt();
+  try{document.body.classList.toggle('ro',STAFF);}catch(e){}
+  var h={load:'load',gps:'gps',prog:'prog',inbox:'survey',team:'tests',matches:'matches'};
+  Object.keys(h).forEach(function(k){var b=document.getElementById('n-'+k);if(b)b.style.display=(STAFF&&!STP[h[k]])?'none':'';});
+  var bs=document.getElementById('n-staff');if(bs)bs.style.display=STAFF?'none':'';
+};
+var VPERM={load:'load',gps:'gps',prog:'prog',inbox:'survey',team:'tests',matches:'matches',hiit:'tests',entry:'x',prev:'x',staff:'x'};
+function stRpc(id,perms,on){return SBC.rpc('set_staff',{target:id,p:perms,enable:on});}
+async function loadStaff(){
+  STLOAD=true;
+  try{
+    var a=await SBC.from('profiles').select('id,email,role').in('role',['none','staff']);
+    var b=await SBC.from('staff_access').select('user_id,perms');
+    if(a.error)throw a.error;if(b.error)throw b.error;
+    var pm={};(b.data||[]).forEach(function(x){pm[x.user_id]=x.perms||{};});
+    STL={p:(a.data||[]).slice().sort(function(x,y){return String(x.email).localeCompare(String(y.email));}),a:pm};STERR=null;
+  }catch(e){STERR=trErr(e)+' (SQL çalıştırıldı mı?)';STL={p:[],a:{}};}
+  finally{STLOAD=false;if(view==='staff')render();}
+}
+async function stApprove(id){var r=await stRpc(id,{},true);if(r.error){toast(trErr(r.error));return;}toast('Hoca olarak onaylandı. İzinleri seç.');loadStaff();}
+async function stPerm(id,k,on){
+  var cur=Object.assign({},(STL&&STL.a[id])||{});cur[k]=!!on;STL.a[id]=cur;
+  var r=await stRpc(id,cur,true);if(r.error){toast(trErr(r.error));loadStaff();return;}toast('Kaydedildi');
+}
+async function stOff(id){if(!confirm('Bu hocanın erişimi kapatılsın mı?'))return;var r=await stRpc(id,{},false);if(r.error){toast(trErr(r.error));return;}toast('Erişim kapatıldı');loadStaff();}
+function vStaff(){
+  var h='<h1>Hocalar</h1><p class="sub">Hocalar sadece görüntüleyebilir, hiçbir şeyi değiştiremez. Hangi verileri göreceğini sen seçersin. Sporcu listesi her hocaya otomatik açılır.</p>';
+  if(!STL){return h+'<p class="dim">'+(STERR?esc(STERR):'Yükleniyor...')+'</p>';}
+  if(STERR)h+='<div class="alert"><b>'+esc(STERR)+'</b></div>';
+  var staff=STL.p.filter(function(x){return x.role==='staff';}),pend=STL.p.filter(function(x){return x.role==='none';});
+  h+='<div class="grp"><h2>Hocalar</h2>'+(staff.length?staff.map(function(x){
+    var pm=STL.a[x.id]||{};
+    return '<div class="form"><b>'+esc(x.email)+'</b>'+STCAT.map(function(c){return '<label class="chk"><input type="checkbox" '+(pm[c[0]]?'checked':'')+' onchange="stPerm(\''+x.id+'\',\''+c[0]+'\',this.checked)">'+c[1]+'</label>';}).join('')+'<div class="row" style="margin-top:10px"><button class="btn small ghost" onclick="stOff(\''+x.id+'\')">Erişimi kapat</button></div></div>';
+  }).join(''):'<p class="dim">Henüz hoca yok.</p>')+'</div>';
+  h+='<div class="grp"><h2>Onay bekleyen hesaplar</h2><p class="dim" style="margin-top:0">Hocanın uygulamadan e-posta ve şifreyle kayıt olması yeterli. Hesap burada görünür. Sporcu olup henüz davet kodu girmemiş hesaplar da burada listelenir, onları onaylama.</p>'+(pend.length?pend.map(function(x){return '<div class="item" style="cursor:default"><div><b>'+esc(x.email)+'</b></div><button class="btn small" onclick="stApprove(\''+x.id+'\')">Hoca olarak onayla</button></div>';}).join(''):'<p class="dim">Bekleyen hesap yok.</p>')+'</div>';
+  return h;
+}
+var _rdSt=render;
+render=function(){
+  if(STAFF){var k=VPERM[view];if(k!==undefined&&(k==='x'||(k&&!STP[k])))view='athletes';}
+  if(ROLE==='coach'&&!STAFF&&view==='staff'){
+    document.getElementById('app').innerHTML=vStaff();
+    if(typeof setNav==='function')setNav();
+    if(!STL&&!STLOAD)loadStaff();
+    return;
+  }
+  _rdSt();
+};
+var _snSt=setNav;
+setNav=function(){_snSt();var b=document.getElementById('n-staff');if(b){if(view==='staff')b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}};
+var _gSt=go;
+go=function(v,id){if(v==='staff'){STL=null;STERR=null;}return _gSt(v,id);};
+setInterval(async function(){
+  if(!STAFF||!SBC||document.hidden)return;
+  try{
+    var uid=(await SBC.auth.getSession()).data.session.user.id;
+    var a=await SBC.from('profiles').select('role').eq('id',uid).maybeSingle();
+    var b=await SBC.from('staff_access').select('perms').eq('user_id',uid).maybeSingle();
+    if(a.error||b.error)return;
+    if(!a.data||a.data.role!=='staff'||JSON.stringify((b.data&&b.data.perms)||{})!==JSON.stringify(STP))location.reload();
+  }catch(e){}
+},60000);
 
 // ---- Uygulama olarak yükleme (PWA)
 var DEFERRED=null;
