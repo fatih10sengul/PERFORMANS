@@ -2983,7 +2983,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792526124;
+var BUILD_ID=1792526252;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3603,6 +3603,14 @@ vMe=function(){
 
 var _vtCmp=vTeam;
 vTeam=function(){return _vtCmp().replace('<h1>Takım</h1>','<h1>Testler</h1>');};
+var _vlYk=vLoad;
+vLoad=function(){
+  showImp=false;
+  var h=_vlYk();
+  h=h.replace(/<div class="row"><button class="btn" onclick="showImp=!showImp;render\(\)">[^<]*<\/button><\/div>/,'');
+  h=h.replace('Henüz GPS verisi yok. CSV dosyası aktar ya da örnek veriyle dene.','Henüz GPS verisi yok. GPS menüsündeki Veri yükle sayfasından günlük dosyayı yükle.');
+  return h;
+};
 var _rdMn=render;
 render=function(){
   if(STAFF&&(view==='gpsup'||view==='tools'||view==='testup'))view='home';
