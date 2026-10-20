@@ -2971,7 +2971,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792522676;
+var BUILD_ID=1792522739;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3570,7 +3570,7 @@ vMe=function(){
   if(meSec==='home'){
     var sub={prog:'Bugünkü egzersizler',survey:'Anketini doldur',tests:'Son test sonuçların',gps:'Son 7 gün özeti',matches:'Maç istatistiklerin'};
     var lab={prog:'Programım',survey:'Günlük anket',tests:'Testlerim',gps:'GPS özetim',matches:'Maçlarım'};
-    return top+'<div class="hgrid">'+Object.keys(lab).filter(function(k){return ok.indexOf(k)>-1;}).map(function(k){return '<button type="button" class="hcard" onclick="mnGo(\''+k+'\')"><b style="font-size:19px">'+lab[k]+'</b><span>'+sub[k]+'</span></button>';}).join('')+'</div>';
+    return '<div class="hero" style="margin-bottom:16px"><small>FETHİYESPOR</small><h1>U19 Performans Paneli</h1><p class="sub" style="margin:0">'+trDate(today())+'</p></div>'+top+'<div class="hgrid">'+Object.keys(lab).filter(function(k){return ok.indexOf(k)>-1;}).map(function(k){return '<button type="button" class="hcard" onclick="mnGo(\''+k+'\')"><b style="font-size:19px">'+lab[k]+'</b><span>'+sub[k]+'</span></button>';}).join('')+'</div>';
   }
   var a=ath(ME);
   return '<h1 style="margin-bottom:0">'+esc(a.n.split(' ')[0])+'</h1>'+(secs[meSec]||'<div class="empty"><p>Bu bölüm için henüz veri yok.</p></div>');
