@@ -2972,7 +2972,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792523102;
+var BUILD_ID=1792523579;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3397,7 +3397,7 @@ function mnItems(){
   }
   return [
     {t:'',i:[['home','Ana sayfa']]},
-    {t:'Sporcular',i:[['athletes','Sporcu listesi'],['team','Takım karşılaştırması','tests']]},
+    {t:'Sporcular',i:[['athletes','Sporcu listesi'],['team','Sporcu karşılaştırma','tests']]},
     {t:'Performans',i:[['entry','Test girişi','!'],['load','Yük ve risk','load'],['matches','Maçlar','matches'],['hiit','HIIT hesaplama','tests']]},
     {t:'GPS',i:[['gpsup','Veri yükle','!'],['gpsday','Seans özeti','gps'],['gpsssg','Küçük oyunlar (SSG)','gps']]},
     {t:'Günlük takip',i:[['inbox','Gelen (anket ve ağrı)','survey'],['prog','Antrenman programı','prog']]},
@@ -3577,6 +3577,8 @@ vMe=function(){
   return '<h1 style="margin-bottom:0">'+esc(a.n.split(' ')[0])+'</h1>'+(secs[meSec]||'<div class="empty"><p>Bu bölüm için henüz veri yok.</p></div>');
 };
 
+var _vtCmp=vTeam;
+vTeam=function(){return _vtCmp().replace('<h1>Takım</h1>','<h1>Sporcu karşılaştırma</h1>');};
 var _rdMn=render;
 render=function(){
   if(STAFF&&(view==='gpsup'||view==='tools'))view='home';
