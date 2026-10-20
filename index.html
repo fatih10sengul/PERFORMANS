@@ -2983,7 +2983,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792533016;
+var BUILD_ID=1792533055;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3732,9 +3732,11 @@ bodySvg=function(v,mode,data){
       var k=v+d[0]+'_'+(m?Lf:R),lab=regLabel(k);
       var on=mode==='pick'?data[k]!=null:(data[k]||0)>0,op=mode==='pick'?1:(.45+Math.min(1,data[k]||0)*.55);
       s+='<path d="'+d[1]+'"'+(m?' transform="translate('+(2*cx)+' 0) scale(-1 1)"':'')+' style="fill:#e53935;fill-opacity:.001;stroke:none;'+(mode==='pick'?'cursor:pointer':'')+'"'+(mode==='pick'?' tabindex="0" role="button" aria-pressed="'+on+'" aria-label="'+esc(lab)+'" onclick="togglePain(\''+k+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();togglePain(\''+k+'\')}"':'')+'><title>'+esc(lab)+'</title></path>';
+      if(!on&&mode==='pick'){var h=C[d[0]],hx=m?2*cx-h[0]:h[0];s+='<circle cx="'+hx+'" cy="'+h[1]+'" r="15" fill="#fff" fill-opacity=".55" stroke="#e53935" stroke-width="4" stroke-dasharray="8 6" style="pointer-events:none"/>';}
       if(on){var c=C[d[0]],x=m?2*cx-c[0]:c[0];s+='<g style="pointer-events:none" opacity="'+op.toFixed(2)+'"><circle cx="'+x+'" cy="'+c[1]+'" r="36" fill="#e53935" fill-opacity=".25"/><circle cx="'+x+'" cy="'+c[1]+'" r="20" fill="#e53935" stroke="#fff" stroke-width="5"/></g>';}
     });
   });
+  s+='<text x="110" y="1085" text-anchor="middle" font-size="44" font-weight="700" fill="#6b7280">'+(v==='F'?'SAĞ':'SOL')+'</text><text x="402" y="1085" text-anchor="middle" font-size="44" font-weight="700" fill="#6b7280">'+(v==='F'?'SOL':'SAĞ')+'</text>';
   return s+'</svg>';
 };
 
