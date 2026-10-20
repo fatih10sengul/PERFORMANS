@@ -2983,7 +2983,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792526687;
+var BUILD_ID=1792527270;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3411,7 +3411,7 @@ function mnItems(){
     {t:'',i:[['home','Ana sayfa']]},
     {t:'Sporcular',i:[['athletes','Sporcu listesi']]},
     {t:'Testler',i:[['testup','Veri yükle','!'],['team','Testler','tests']]},
-    {t:'GPS',i:[['gpsup','Veri yükle','!'],['sub','Yük ve risk','load',[['load','ACWR','load'],['loadtarget','Maç günü hedefi','load'],['loadweek','Haftalık yük','load']]],['gpsday','Seans özeti','gps'],['gpsssg','Küçük oyunlar (SSG)','gps']]},
+    {t:'GPS',i:[['gpsup','Veri yükle','!'],['gpsday','GPS verileri','gps'],['sub','Yük ve risk','load',[['load','ACWR','load'],['loadtarget','Maç günü hedefi','load'],['loadweek','Haftalık yük','load']]],['gpsssg','Küçük oyunlar (SSG)','gps']]},
     {t:'Günlük takip',i:[['inbox','Gelen (anket ve ağrı)','survey'],['prog','Antrenman programı','prog']]},
     {t:'Yönetim',i:[['tools','Veri ve araçlar','!'],['staff','Hocalar','!']]},
     {t:'Maç verileri',i:[['matches','Maçlar','matches']]}
@@ -3569,7 +3569,7 @@ function guDo(){
     if(x.d>mx)mx=x.d;
   });
   var n=pv.ok.length,sk=pv.un.length+pv.amb.length;
-  gu=null;if(mx)gpsDate=mx;save();render();
+  gu=null;if(mx)gpsDate=mx;gpsMode='day';save();go('gps');
   toast(n+' sporcunun verisi yüklendi'+(sk?', '+sk+' isim eşleşmedi':''));
 }
 function guOpen(d){gpsDate=d;gpsMode='day';go('gps');}
@@ -3629,6 +3629,41 @@ vLoad=function(){
   h=h.replace('Henüz GPS verisi yok. CSV dosyası aktar ya da örnek veriyle dene.','Henüz GPS verisi yok. GPS menüsündeki Veri yükle sayfasından günlük dosyayı yükle.');
   return h;
 };
+// GPS verileri: PDF ve eksik veri listesi
+function gpsMissing(){return db.athletes.filter(function(a){return !db.gps.some(function(g){return g.a===a.id&&g.d===gpsDate;});}).sort(function(x,y){return x.n.localeCompare(y.n,'tr');});}
+var _vgGv=vGps;
+vGps=function(){
+  var h=_vgGv();
+  if(gpsMode!=='day'||h.indexOf('id="gd"')<0||!gpsDate)return h;
+  h=h.replace('<label for="gd">','<div class="row" style="margin:0 0 4px"><button class="btn small" onclick="gpsPdf()">PDF indir</button></div><label for="gd">');
+  var ms=gpsMissing();
+  if(ms.length&&ms.length<db.athletes.length){
+    var note='<div class="alert" style="margin-top:12px"><b>Bu gün verisi olmayan ('+ms.length+'):</b> '+ms.map(function(a){return esc(a.n);}).join(', ')+'</div>';
+    var k='<p class="dim" style="margin-top:8px">HSR:';
+    h=h.indexOf(k)>-1?h.replace(k,note+k):h+note;
+  }
+  return h;
+};
+function gpsRep(){
+  var rows=db.gps.filter(function(g){return g.d===gpsDate;}).map(function(g){return {a:ath(g.a),g:g};}).filter(function(r){return r.a;});
+  rows.sort(function(x,y){return (y.g.td||0)-(x.g.td||0);});
+  var K=['td','hsr','spr','pl','acc','dec','rs','hrv','hr','hml','vm','min'];
+  var L={td:'Total Dist. (m)',hsr:'HSR (m)',spr:'Sprint (m)',pl:'PL',acc:'ACC',dec:'DEC',rs:'RS',hrv:'HRV',hr:'Ort. HR',hml:'HML (m)',vm:'Maks hız',min:'Dk'};
+  var f=function(k,v){return v==null?'-':k==='vm'?Number(v).toFixed(1).replace('.',','):n0(v);};
+  var use=K.filter(function(k){return rows.some(function(r){return r.g[k]!=null;});});
+  var avg=function(k){var v=rows.filter(function(r){return r.g[k]!=null;}).map(function(r){return r.g[k];});return v.length?v.reduce(function(a,b){return a+b;},0)/v.length:null;};
+  var ms=gpsMissing();
+  return RS+'<style>.r.gp{padding:26px 22px}.r.gp h1{font-size:30px}.r.gp th,.r.gp td{padding:3px 2px;font-size:9px}.r.gp th{font-size:8px}.r.gp .ft{margin-top:12px}</style><div class="r gp"><h1>GPS verileri</h1><div class="m">'+trDate(gpsDate)+' · '+rows.length+' sporcu</div>'+
+    '<table style="margin-top:12px"><thead><tr><th>Sporcu</th>'+use.map(function(k){return '<th>'+L[k]+'</th>';}).join('')+'</tr></thead><tbody>'+
+    '<tr style="font-weight:600"><td>Takım ortalaması</td>'+use.map(function(k){return '<td>'+f(k,avg(k))+'</td>';}).join('')+'</tr>'+
+    rows.map(function(r){return '<tr><td>'+esc(r.a.n)+'</td>'+use.map(function(k){return '<td>'+f(k,r.g[k])+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table>'+
+    (ms.length&&ms.length<db.athletes.length?'<div class="m" style="margin-top:10px">Bu gün verisi olmayan: '+ms.map(function(a){return esc(a.n);}).join(', ')+'</div>':'')+
+    '<div class="ft">HSR: yüksek hızlı koşu, PL: Player Load, ACC/DEC: ivmelenme ve yavaşlama sayısı, RS: tekrarlı sprint, HRV: rMSSD (ms), HML: yüksek metabolik güç mesafesi. FETHİYESPOR U19 performans paneli.</div></div>';
+}
+function gpsPdf(){
+  if(!gpsDate||!db.gps.some(function(g){return g.d===gpsDate;})){toast('Bu gün için GPS verisi yok.');return;}
+  makePdf(gpsRep(),'GPS-verileri-'+gpsDate+'.pdf');
+}
 var _rdMn=render;
 render=function(){
   if(STAFF&&(view==='gpsup'||view==='tools'||view==='testup'))view='home';
