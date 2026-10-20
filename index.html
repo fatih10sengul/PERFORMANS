@@ -2983,7 +2983,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792527819;
+var BUILD_ID=1792528295;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3634,6 +3634,7 @@ function gpsMissing(){return db.athletes.filter(function(a){return !db.gps.some(
 var _vgGv=vGps;
 vGps=function(){
   var h=_vgGv();
+  h=h.replace(/<div class="row" style="margin:0 0 10px"><button class="btn small[^"]*" onclick="gpsMode=[^"]*">Seans<\/button><button class="btn small[^"]*" onclick="gpsMode=[^"]*">Küçük oyunlar<\/button><\/div>/,'');
   if(gpsMode!=='day'||h.indexOf('id="gd"')<0||!gpsDate)return h;
   h=h.replace('<label for="gd">','<div class="row" style="margin:0 0 4px"><button class="btn small" onclick="gpsPdf()">PDF indir</button></div><label for="gd">');
   var ms=gpsMissing();
