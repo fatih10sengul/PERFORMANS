@@ -2569,7 +2569,7 @@ vAthletes=function(){
 var _ttSt=txToggle;
 txToggle=function(){if(view==='testup'){txReset();render();return;}return _ttSt();};
 function vTestUp(){
-  var h='<h1>Test Excel aktarma</h1><p class="sub">Test dosyalarını seç, tanınan düzeni ve tarihi kontrol et, onayla.</p>'+txPanel();
+  var h='<h1>Veri aktar</h1><p class="sub">Test dosyalarını seç, tanınan düzeni ve tarihi kontrol et, onayla.</p>'+txPanel();
   var by={};db.records.forEach(function(x){(by[x.d]=by[x.d]||{})[x.a]=1;});
   var ds=Object.keys(by).sort().reverse().slice(0,10);
   h+='<div class="grp"><h2>Son test günleri</h2>'+(ds.length?'<div class="list">'+ds.map(function(d){return '<div class="item" style="cursor:default"><div><b>'+trDate(d)+'</b></div><span>'+Object.keys(by[d]).length+' sporcu</span></div>';}).join('')+'</div>':'<p class="dim">Henüz test verisi yok.</p>')+'</div>';
@@ -2577,12 +2577,12 @@ function vTestUp(){
   return h;
 }
 var _veSt=vEntry;
-vEntry=function(){return '<button class="back" onclick="go(\'testup\')">Test Excel aktarmaya dön</button>'+_veSt().replace('<h1>Test girişi</h1>','<h1>Elle test girişi</h1>');};
+vEntry=function(){return '<button class="back" onclick="go(\'testup\')">Veri aktarmaya dön</button>'+_veSt().replace('<h1>Test girişi</h1>','<h1>Elle test girişi</h1>');};
 function vTools(){
   var has=db.athletes.length>0;
   var h='<h1>Veri ve araçlar</h1><p class="sub">Veri girişi, düzenleme ve dışa aktarma</p>';
   h+='<div class="grp"><h2>Veri girişi</h2><div class="row" style="margin:10px 0 8px">'+
-    '<button class="btn ghost" onclick="go(\'testup\')">Test Excel aktarma</button>'+
+    '<button class="btn ghost" onclick="go(\'testup\')">Veri aktar</button>'+
     (has?'<button class="btn ghost" onclick="posToggle()">'+(posOpen?'Pozisyonları kapat':'Pozisyonları düzenle')+'</button>':'')+'</div>'+
     (posOpen&&has?posPanel():'')+'</div>';
   if(has)h+='<div class="grp"><h2>Dışa aktar</h2><div class="row" style="margin:10px 0 8px"><button class="btn ghost" onclick="testsCsv()">Testleri indir (CSV)</button><button class="btn ghost" onclick="backupJson()">Yedek indir</button><button class="btn ghost" onclick="inviteCsv()">Davet kodlarını indir</button></div></div>';
@@ -2983,7 +2983,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792525897;
+var BUILD_ID=1792525987;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3410,7 +3410,7 @@ function mnItems(){
   return [
     {t:'',i:[['home','Ana sayfa']]},
     {t:'Sporcular',i:[['athletes','Sporcu listesi']]},
-    {t:'Testler',i:[['testup','Test Excel aktarma','!'],['team','Testler','tests']]},
+    {t:'Testler',i:[['testup','Veri aktar','!'],['team','Testler','tests']]},
     {t:'GPS',i:[['gpsup','Veri yükle','!'],['gpsday','Seans özeti','gps'],['gpsssg','Küçük oyunlar (SSG)','gps'],['load','Yük ve risk','load']]},
     {t:'Günlük takip',i:[['inbox','Gelen (anket ve ağrı)','survey'],['prog','Antrenman programı','prog']]},
     {t:'Yönetim',i:[['tools','Veri ve araçlar','!'],['staff','Hocalar','!']]},
