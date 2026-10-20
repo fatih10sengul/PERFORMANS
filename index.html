@@ -2971,7 +2971,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792522581;
+var BUILD_ID=1792522676;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3383,7 +3383,7 @@ var meSec='home';
   '#mndr button.mi[aria-current="page"]{border-left-color:var(--accent);background:var(--bg);font-weight:600}'+
   '.hgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}.hgrid>.hcard:last-child:nth-child(odd){grid-column:1/-1}.hwide{display:block;width:100%;margin:0 0 16px}@media(min-width:700px){.hgrid{grid-template-columns:repeat(3,1fr)}.hgrid>.hcard:last-child:nth-child(odd){grid-column:auto}.hgrid>.hcard:last-child:nth-child(3n+1){grid-column:1/-1}.hgrid>.hcard:last-child:nth-child(3n+2){grid-column:span 2}}'+
   '.hcard{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);padding:14px;text-align:left;border-radius:12px;font:inherit}.hcard b{display:block;font-size:26px;line-height:1.2}.hcard span{font-size:13px;color:var(--muted)}'+
-  '.hero{border:1.5px solid var(--ink);border-radius:14px;padding:22px 18px;margin:4px 0 6px;background:linear-gradient(135deg,var(--surface),var(--bg))}.hero small{letter-spacing:.2em;color:var(--accent);font-weight:700}.hero h1{margin:6px 0 4px}';
+  '.hero{border:1.5px solid var(--ink);border-radius:14px;padding:22px 18px;margin:4px 0 6px;min-height:270px;display:flex;flex-direction:column;justify-content:flex-end;color:#fff;background:linear-gradient(180deg,rgba(6,12,18,.15) 0%,rgba(6,12,18,.82) 100%),url(kapak.jpg) center 35%/cover no-repeat,#0b1218}.hero small{letter-spacing:.2em;color:#5df0b8;font-weight:700}.hero h1{margin:6px 0 4px;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6)}.hero .sub{color:rgba(255,255,255,.85)!important}@media(min-width:700px){.hero{min-height:300px}}';
   document.head.appendChild(st);
 })();
 function mnCan(c){if(!c)return true;if(c==='!')return !STAFF&&ROLE==='coach';if(!STAFF)return true;return !!STP[c];}
