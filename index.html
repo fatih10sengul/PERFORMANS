@@ -2559,23 +2559,24 @@ function toolsToggle(el){toolsOpen=!!(el&&el.open);}
 var _vaX2=vAthletes;
 vAthletes=function(){
   var h=_vaX2();if(ROLE!=='coach')return h;
-  var has=db.athletes.length>0,op=toolsOpen||txOpen||posOpen||showAdd;
-  // üstteki buton satırını ve ekleme formunu çıkar, hepsini listenin altına al
+  if(!STAFF)return h.replace('<button class="btn ghost" onclick="go(\'entry\')">Test girişi</button>','');
+  // hoca: ekleme düğmesi ve formu çıkar
   var i=h.indexOf('<div class="row">'),j=i>-1?h.indexOf('</div>',i)+6:-1;
   var e=h.indexOf('<div class="list">');if(e<0)e=h.indexOf('<div class="empty">');
-  var form='';
-  if(i>-1&&j>i){
-    if(e>j)form=h.slice(j,e);
-    h=h.slice(0,i)+h.slice(e>j?e:j);
-  }
-  var T='<details class="tools"'+(op?' open':'')+' ontoggle="toolsToggle(this)" style="margin:22px 0 14px"><summary>Veri ve araçlar</summary><div class="row" style="margin:10px 0 8px">'+
-    '<button class="btn ghost" onclick="go(\'entry\')">Test girişi</button>'+
-    '<button class="btn ghost" onclick="showAdd=!showAdd;render()">'+(showAdd?'Formu kapat':'Sporcu ekle')+'</button>'+
-    '<button class="btn ghost" onclick="txToggle()">'+(txOpen?'Excel aktarımını kapat':'Excel aktar')+'</button>'+
-    (has?'<button class="btn ghost" onclick="posToggle()">'+(posOpen?'Pozisyonları kapat':'Pozisyonları düzenle')+'</button><button class="btn ghost" onclick="go(\'hiit\')">HIIT hesaplama</button><button class="btn ghost" onclick="testsCsv()">Testleri indir (CSV)</button><button class="btn ghost" onclick="backupJson()">Yedek indir</button><button class="btn ghost" onclick="inviteCsv()">Davet kodlarını indir</button>':'')+
-    '</div>'+form+(txOpen?txPanel():'')+(posOpen&&has?posPanel():'')+'</details>';
-  return h+T;
+  if(i>-1&&j>i)h=h.slice(0,i)+h.slice(e>j?e:j);
+  return h;
 };
+function vTools(){
+  var has=db.athletes.length>0;
+  var h='<h1>Veri ve araçlar</h1><p class="sub">Veri girişi, düzenleme ve dışa aktarma</p>';
+  h+='<div class="grp"><h2>Veri girişi</h2><div class="row" style="margin:10px 0 8px">'+
+    '<button class="btn ghost" onclick="go(\'entry\')">Test girişi</button>'+
+    '<button class="btn ghost" onclick="txToggle()">'+(txOpen?'Excel aktarımını kapat':'Excel aktar')+'</button>'+
+    (has?'<button class="btn ghost" onclick="posToggle()">'+(posOpen?'Pozisyonları kapat':'Pozisyonları düzenle')+'</button>':'')+'</div>'+
+    (txOpen?txPanel():'')+(posOpen&&has?posPanel():'')+'</div>';
+  if(has)h+='<div class="grp"><h2>Dışa aktar</h2><div class="row" style="margin:10px 0 8px"><button class="btn ghost" onclick="testsCsv()">Testleri indir (CSV)</button><button class="btn ghost" onclick="backupJson()">Yedek indir</button><button class="btn ghost" onclick="inviteCsv()">Davet kodlarını indir</button></div></div>';
+  return h;
+}
 
 // ---- Sporcu bilgilerini düzenleme (ad, pozisyon, doğum tarihi)
 var posOpen=false;
@@ -2971,7 +2972,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792522739;
+var BUILD_ID=1792523102;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3400,7 +3401,7 @@ function mnItems(){
     {t:'Performans',i:[['entry','Test girişi','!'],['load','Yük ve risk','load'],['matches','Maçlar','matches'],['hiit','HIIT hesaplama','tests']]},
     {t:'GPS',i:[['gpsup','Veri yükle','!'],['gpsday','Seans özeti','gps'],['gpsssg','Küçük oyunlar (SSG)','gps']]},
     {t:'Günlük takip',i:[['inbox','Gelen (anket ve ağrı)','survey'],['prog','Antrenman programı','prog']]},
-    {t:'Yönetim',i:[['staff','Hocalar','!'],['backup','Veri yedeği','!']]}
+    {t:'Yönetim',i:[['tools','Veri ve araçlar','!'],['staff','Hocalar','!']]}
   ];
 }
 function mnCur(){
@@ -3578,9 +3579,9 @@ vMe=function(){
 
 var _rdMn=render;
 render=function(){
-  if(STAFF&&view==='gpsup')view='home';
-  if(ROLE==='coach'&&(view==='home'||view==='gpsup')){
-    document.getElementById('app').innerHTML=view==='home'?vHome():vGpsUp();
+  if(STAFF&&(view==='gpsup'||view==='tools'))view='home';
+  if(ROLE==='coach'&&(view==='home'||view==='gpsup'||view==='tools')){
+    document.getElementById('app').innerHTML=view==='home'?vHome():view==='tools'?vTools():vGpsUp();
     if(typeof setNav==='function')setNav();
   }else _rdMn.apply(this,arguments);
   mnBuild();
