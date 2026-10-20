@@ -109,7 +109,7 @@ nav button{font-size:14px;padding:15px 2px}
   <button id="n-inbox" onclick="go('inbox')">Gelen</button>
   <button id="n-team" onclick="go('team')">Takım</button>
   <button id="n-matches" onclick="go('matches')">Maçlar</button>
-  <button id="n-staff" onclick="go('staff')">Hocalar</button>
+  <button id="n-staff" onclick="go('staff')">Antrenörler</button>
 </nav>
 
 <script>
@@ -1866,7 +1866,7 @@ function showLogin(){
     '<p class="dim" style="margin:16px 0 0"><button class="back" style="margin:0;padding:0" onclick="authMode=\''+(up?'in':'up')+'\';showLogin()">'+(up?'Zaten hesabım var, giriş yap':'Sporcuyum, davet koduyla kayıt ol')+'</button></p></div>');
 }
 function showClaim(msg){
-  authBox('<p class="sub">Hesabın hazır. Sporcuysan antrenörünün verdiği davet kodunu gir. Hocaysan antrenörün hesabını onaylayana kadar bekle, sonra uygulamayı yeniden aç.</p><div class="form"><label for="au-c">Davet kodu</label><input id="au-c" autocapitalize="off" autocomplete="off" placeholder="12 haneli kod"><div id="au-msg" class="au-msg bad" role="alert">'+esc(msg||'')+'</div><div class="row" style="margin-top:14px"><button class="btn" onclick="doClaim()">Devam et</button><button class="btn ghost" onclick="doSignOut()">Çıkış</button></div></div>');
+  authBox('<p class="sub">Hesabın hazır. Sporcuysan antrenörünün verdiği davet kodunu gir. Antrenör olarak kaydolduysan, ana antrenör hesabını onaylayana kadar bekle, sonra uygulamayı yeniden aç.</p><div class="form"><label for="au-c">Davet kodu</label><input id="au-c" autocapitalize="off" autocomplete="off" placeholder="12 haneli kod"><div id="au-msg" class="au-msg bad" role="alert">'+esc(msg||'')+'</div><div class="row" style="margin-top:14px"><button class="btn" onclick="doClaim()">Devam et</button><button class="btn ghost" onclick="doSignOut()">Çıkış</button></div></div>');
 }
 function showFatal(msg){
   authBox('<div class="form"><p class="au-msg bad" style="display:block">'+esc(msg)+'</p><div class="row" style="margin-top:14px"><button class="btn" onclick="location.reload()">Yeniden dene</button><button class="btn ghost" onclick="doSignOut()">Çıkış</button></div></div>');
@@ -1998,9 +1998,9 @@ async function boot(){
     ROLE=pr.data.role;
     if(ROLE==='staff'){
       var sa=await SBC.from('staff_access').select('perms').eq('user_id',uid0).maybeSingle();
-      if(sa.error){showFatal('Hoca izinleri alınamadı: '+trErr(sa.error));return;}
+      if(sa.error){showFatal('Antrenör izinleri alınamadı: '+trErr(sa.error));return;}
       STP=(sa.data&&sa.data.perms)||{};STAFF=true;ROLE='coach';
-      save=function(){var n=Date.now();if(n-(save.t||0)<3000)return;save.t=n;SYNC.dirty=false;toast('Hoca hesabı salt okunur, değişiklik kaydedilmez.');loadAll().then(function(){render();}).catch(function(){});};
+      save=function(){var n=Date.now();if(n-(save.t||0)<3000)return;save.t=n;SYNC.dirty=false;toast('Antrenör hesabı salt okunur, değişiklik kaydedilmez.');loadAll().then(function(){render();}).catch(function(){});};
     }
     if(ROLE==='none'){
       var pc=null;try{pc=localStorage.getItem('pp_pending_code');}catch(x){}
@@ -2983,7 +2983,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792531281;
+var BUILD_ID=1792531415;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3330,22 +3330,22 @@ async function loadStaff(){
   }catch(e){STERR=trErr(e)+' (SQL çalıştırıldı mı?)';STL={p:[],a:{}};}
   finally{STLOAD=false;if(view==='staff')render();}
 }
-async function stApprove(id){var r=await stRpc(id,{},true);if(r.error){toast(trErr(r.error));return;}toast('Hoca olarak onaylandı. İzinleri seç.');loadStaff();}
+async function stApprove(id){var r=await stRpc(id,{},true);if(r.error){toast(trErr(r.error));return;}toast('Antrenör olarak onaylandı. İzinleri seç.');loadStaff();}
 async function stPerm(id,k,on){
   var cur=Object.assign({},(STL&&STL.a[id])||{});cur[k]=!!on;STL.a[id]=cur;
   var r=await stRpc(id,cur,true);if(r.error){toast(trErr(r.error));loadStaff();return;}toast('Kaydedildi');
 }
-async function stOff(id){if(!confirm('Bu hocanın erişimi kapatılsın mı?'))return;var r=await stRpc(id,{},false);if(r.error){toast(trErr(r.error));return;}toast('Erişim kapatıldı');loadStaff();}
+async function stOff(id){if(!confirm('Bu antrenörün erişimi kapatılsın mı?'))return;var r=await stRpc(id,{},false);if(r.error){toast(trErr(r.error));return;}toast('Erişim kapatıldı');loadStaff();}
 function vStaff(){
-  var h='<h1>Hocalar</h1><p class="sub">Hocalar sadece görüntüleyebilir, hiçbir şeyi değiştiremez. Hangi verileri göreceğini sen seçersin. Sporcu listesi her hocaya otomatik açılır.</p>';
+  var h='<h1>Antrenörler</h1><p class="sub">Antrenörler sadece görüntüleyebilir, hiçbir şeyi değiştiremez. Hangi verileri göreceğini sen seçersin. Sporcu listesi her antrenöre otomatik açılır.</p>';
   if(!STL){return h+'<p class="dim">'+(STERR?esc(STERR):'Yükleniyor...')+'</p>';}
   if(STERR)h+='<div class="alert"><b>'+esc(STERR)+'</b></div>';
   var staff=STL.p.filter(function(x){return x.role==='staff';}),pend=STL.p.filter(function(x){return x.role==='none';});
-  h+='<div class="grp"><h2>Hocalar</h2>'+(staff.length?staff.map(function(x){
+  h+='<div class="grp"><h2>Antrenörler</h2>'+(staff.length?staff.map(function(x){
     var pm=STL.a[x.id]||{};
     return '<div class="form"><b>'+esc(x.email)+'</b>'+STCAT.map(function(c){return '<label class="chk"><input type="checkbox" '+(pm[c[0]]?'checked':'')+' onchange="stPerm(\''+x.id+'\',\''+c[0]+'\',this.checked)">'+c[1]+'</label>';}).join('')+'<div class="row" style="margin-top:10px"><button class="btn small ghost" onclick="stOff(\''+x.id+'\')">Erişimi kapat</button></div></div>';
-  }).join(''):'<p class="dim">Henüz hoca yok.</p>')+'</div>';
-  h+='<div class="grp"><h2>Onay bekleyen hesaplar</h2><p class="dim" style="margin-top:0">Hocanın uygulamadan e-posta ve şifreyle kayıt olması yeterli. Hesap burada görünür. Sporcu olup henüz davet kodu girmemiş hesaplar da burada listelenir, onları onaylama.</p>'+(pend.length?pend.map(function(x){return '<div class="item" style="cursor:default"><div><b>'+esc(x.email)+'</b></div><button class="btn small" onclick="stApprove(\''+x.id+'\')">Hoca olarak onayla</button></div>';}).join(''):'<p class="dim">Bekleyen hesap yok.</p>')+'</div>';
+  }).join(''):'<p class="dim">Henüz antrenör yok.</p>')+'</div>';
+  h+='<div class="grp"><h2>Onay bekleyen hesaplar</h2><p class="dim" style="margin-top:0">Antrenörün uygulamadan e-posta ve şifreyle kayıt olması yeterli. Hesap burada görünür. Sporcu olup henüz davet kodu girmemiş hesaplar da burada listelenir, onları onaylama.</p>'+(pend.length?pend.map(function(x){return '<div class="item" style="cursor:default"><div><b>'+esc(x.email)+'</b></div><button class="btn small" onclick="stApprove(\''+x.id+'\')">Antrenör olarak onayla</button></div>';}).join(''):'<p class="dim">Bekleyen hesap yok.</p>')+'</div>';
   return h;
 }
 var _rdSt=render;
@@ -3413,7 +3413,7 @@ function mnItems(){
     {t:'Testler',i:[['testup','Veri yükle','!'],['team','Testler','tests']]},
     {t:'GPS',i:[['gpsup','Veri yükle','!'],['gpsday','GPS verileri','gps'],['load','ACWR','load'],['loadtarget','Günlük hedef','load'],['loadweek','Haftalık hedef','load'],['gpsssg','Küçük oyunlar (SSG)','gps']]},
     {t:'Antrenman ve takip',i:[['inbox','Gelen (anket ve ağrı)','survey'],['prog','Antrenman programı','prog']]},
-    {t:'Sistem',i:[['staff','Hocalar','!'],['invites','Davet kodları','!']]},
+    {t:'Sistem',i:[['staff','Antrenörler','!'],['invites','Davet kodları','!']]},
     {t:'Maç verileri',i:[['matches','Maçlar','matches']]}
   ];
 }
@@ -3440,7 +3440,7 @@ function mnBuild(){
     document.addEventListener('keydown',function(e){if(e.key==='Escape')mnClose(true);});
   }
   try{document.body.classList.add('hasmenu');}catch(e){}
-  var cur=mnCur(),ttl='',h='<div class="mh">FETHİYESPOR U19<small>'+(ROLE==='athlete'?'Sporcu paneli':STAFF?'Hoca paneli':'Antrenör paneli')+'</small></div>';
+  var cur=mnCur(),ttl='',h='<div class="mh">FETHİYESPOR U19<small>'+(ROLE==='athlete'?'Sporcu paneli':STAFF?'Antrenör (görüntüleme)':'Antrenör paneli')+'</small></div>';
   mnItems().forEach(function(g,gi){
     var its=mnLeaf(g);
     if(!its.length)return;
