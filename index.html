@@ -2971,7 +2971,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792499626;
+var BUILD_ID=1792522130;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3462,7 +3462,6 @@ function vHome(){
   if(mnCan('survey'))cs.push(['inbox',unseenN(),'Bekleyen ağrı bildirimi']);
   if(mnCan('gps')){var ds=db.gps.map(function(g){return g.d;}).sort();var ld=ds.length?ds[ds.length-1]:null;cs.push([STAFF?'gpsday':'gpsup',ld?trDate(ld):'-',STAFF?'Son GPS günü':'Son GPS günü, veri yükle']);}
   if(mnCan('matches')&&(db.matches||[]).length){var lm=db.matches.slice().sort(function(x,y){return x.d<y.d?1:-1})[0];cs.push(['matches',mScore(lm),'Son maç: '+(lm.opp||'')]);}
-  if(mnCan('tests')){var td=db.records.map(function(r){return r.d;}).sort();cs.push(['team',td.length?trDate(td[td.length-1]):'-','Son test günü']);}
   h+='<div class="hgrid">'+cs.map(function(c){return '<button type="button" class="hcard" onclick="mnGo(\''+c[0]+'\')"><b>'+esc(String(c[1]))+'</b><span>'+esc(c[2])+'</span></button>';}).join('')+'</div>';
   h+='<p class="dim">Sol üstteki üç çizgi düğmesinden tüm bölümlere ulaşabilirsin.</p>';
   return h;
