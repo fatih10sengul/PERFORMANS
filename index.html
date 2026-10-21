@@ -1856,14 +1856,14 @@ function authHide(){var el=document.getElementById('auth');if(el)el.style.displa
 var authMode='in';
 function authMsg(t,ok){var e=document.getElementById('au-msg');if(e){e.textContent=t;e.className='au-msg '+(ok?'ok':'bad');}}
 function showLogin(){
-  var up=authMode==='up';
-  authBox('<p class="sub">'+(up?'Antrenörünün verdiği davet koduyla hesabını oluştur.':'Hesabınla giriş yap.')+'</p>'+
+  var st=authMode==='st',up=authMode==='up'||st;
+  authBox('<p class="sub">'+(st?'Antrenör hesabı oluştur. Hesabın, ana antrenör onayladıktan sonra açılır.':up?'Antrenörünün verdiği davet koduyla hesabını oluştur.':'Hesabınla giriş yap.')+'</p>'+
     '<div class="form"><label for="au-e">E-posta</label><input id="au-e" type="email" autocomplete="email" inputmode="email" autocapitalize="off">'+
     '<label for="au-p">Şifre'+(up?' (en az 8 karakter)':'')+'</label><input id="au-p" type="password" autocomplete="'+(up?'new-password':'current-password')+'">'+
-    (up?'<label for="au-c">Davet kodu</label><input id="au-c" autocapitalize="off" autocomplete="off" placeholder="12 haneli kod">':'')+
+    (up&&!st?'<label for="au-c">Davet kodu</label><input id="au-c" autocapitalize="off" autocomplete="off" placeholder="12 haneli kod">':'')+
     '<div id="au-msg" class="au-msg" role="alert"></div>'+
     '<div class="row" style="margin-top:14px"><button class="btn" id="au-go" onclick="'+(up?'doSignUp()':'doSignIn()')+'">'+(up?'Hesap oluştur':'Giriş yap')+'</button></div>'+
-    '<p class="dim" style="margin:16px 0 0"><button class="back" style="margin:0;padding:0" onclick="authMode=\''+(up?'in':'up')+'\';showLogin()">'+(up?'Zaten hesabım var, giriş yap':'Sporcuyum, davet koduyla kayıt ol')+'</button></p></div>');
+    '<p class="dim" style="margin:16px 0 0"><button class="back" style="margin:0;padding:0" onclick="authMode=\''+(up?'in':'up')+'\';showLogin()">'+(up?'Zaten hesabım var, giriş yap':'Sporcuyum, davet koduyla kayıt ol')+'</button></p>'+(up?'':'<p class="dim" style="margin:10px 0 0"><button class="back" style="margin:0;padding:0" onclick="authMode=\'st\';showLogin()">Antrenörüm, hesap oluştur</button></p>')+(st?'<p class="dim" style="margin:10px 0 0"><button class="back" style="margin:0;padding:0" onclick="authMode=\'up\';showLogin()">Sporcuyum, davet koduyla kayıt ol</button></p>':'')+'</div>');
 }
 function showClaim(msg){
   authBox('<p class="sub">Hesabın hazır. Sporcuysan antrenörünün verdiği davet kodunu gir. Antrenör olarak kaydolduysan, ana antrenör hesabını onaylayana kadar bekle, sonra uygulamayı yeniden aç.</p><div class="form"><label for="au-c">Davet kodu</label><input id="au-c" autocapitalize="off" autocomplete="off" placeholder="12 haneli kod"><div id="au-msg" class="au-msg bad" role="alert">'+esc(msg||'')+'</div><div class="row" style="margin-top:14px"><button class="btn" onclick="doClaim()">Devam et</button><button class="btn ghost" onclick="doSignOut()">Çıkış</button></div></div>');
@@ -1882,14 +1882,14 @@ async function doSignIn(){
   boot();
 }
 async function doSignUp(){
-  var e=document.getElementById('au-e').value.trim(),p=document.getElementById('au-p').value,c=document.getElementById('au-c').value.trim();
-  if(!e||!p||!c){authMsg('E-posta, şifre ve davet kodu gerekli.');return;}
+  var stm=authMode==='st',e=document.getElementById('au-e').value.trim(),p=document.getElementById('au-p').value,c=stm?'':document.getElementById('au-c').value.trim();
+  if(!e||!p||(!stm&&!c)){authMsg(stm?'E-posta ve şifre gerekli.':'E-posta, şifre ve davet kodu gerekli.');return;}
   if(p.length<8){authMsg('Şifre en az 8 karakter olmalı.');return;}
   busyBtn(true);authMsg('');
   var r=await SBC.auth.signUp({email:e,password:p});
   busyBtn(false);
   if(r.error){authMsg(trErr(r.error));return;}
-  try{localStorage.setItem('pp_pending_code',c);}catch(x){}
+  try{if(stm)localStorage.removeItem('pp_pending_code');else localStorage.setItem('pp_pending_code',c);}catch(x){}
   if(!r.data||!r.data.session){authMsg('Kayıt alındı. E-postana gelen onay bağlantısına tıkla, sonra giriş yap.',true);return;}
   boot();
 }
@@ -2983,7 +2983,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792533055;
+var BUILD_ID=1792604312;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
