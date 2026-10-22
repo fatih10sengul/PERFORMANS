@@ -2983,7 +2983,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792604312;
+var BUILD_ID=1792676246;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3396,7 +3396,7 @@ var meSec='home',mnExp={};
   '#mndr button.mi[aria-current="page"]{border-left-color:var(--accent);background:var(--bg);font-weight:600}'+
   '.hgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}.hgrid>.hcard:last-child:nth-child(odd){grid-column:1/-1}.hwide{display:block;width:100%;margin:0 0 16px}@media(min-width:700px){.hgrid{grid-template-columns:repeat(3,1fr)}.hgrid>.hcard:last-child:nth-child(odd){grid-column:auto}.hgrid>.hcard:last-child:nth-child(3n+1){grid-column:1/-1}.hgrid>.hcard:last-child:nth-child(3n+2){grid-column:span 2}}'+
   '.hcard{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);padding:14px;text-align:left;border-radius:12px;font:inherit}.hcard b{display:block;font-size:26px;line-height:1.2}.hcard span{font-size:13px;color:var(--muted)}'+
-  '.hero{border:1.5px solid var(--ink);border-radius:14px;padding:22px 18px;margin:4px 0 6px;min-height:270px;display:flex;flex-direction:column;justify-content:flex-end;color:#fff;background:linear-gradient(180deg,rgba(6,12,18,.15) 0%,rgba(6,12,18,.82) 100%),url(kapak.jpg) center 35%/cover no-repeat,#0b1218}.hero small{letter-spacing:.2em;color:#5df0b8;font-weight:700}.hero h1{margin:6px 0 4px;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6)}.hero .sub{color:rgba(255,255,255,.85)!important}@media(min-width:700px){.hero{min-height:300px}}';
+  '.hero{border:1.5px solid var(--ink);border-radius:14px;padding:22px 18px;margin:4px 0 6px;min-height:270px;display:flex;flex-direction:column;justify-content:flex-end;color:#fff;background:linear-gradient(180deg,rgba(6,12,18,.15) 0%,rgba(6,12,18,.82) 100%),url(kapak.jpg) center 35%/cover no-repeat,#0b1218}.hero small{letter-spacing:.2em;color:#ff7480;font-weight:700}.hero h1{margin:6px 0 4px;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6)}.hero .sub{color:rgba(255,255,255,.85)!important}@media(min-width:700px){.hero{min-height:300px}}';
   document.head.appendChild(st);
 })();
 function mnCan(c){if(!c)return true;if(c==='!')return !STAFF&&ROLE==='coach';if(!STAFF)return true;return !!STP[c];}
@@ -3738,6 +3738,38 @@ bodySvg=function(v,mode,data){
   });
   s+='<text x="110" y="1085" text-anchor="middle" font-size="44" font-weight="700" fill="#6b7280">'+(v==='F'?'SAĞ':'SOL')+'</text><text x="402" y="1085" text-anchor="middle" font-size="44" font-weight="700" fill="#6b7280">'+(v==='F'?'SOL':'SAĞ')+'</text>';
   return s+'</svg>';
+};
+
+
+// ---- Kulüp renkleri (lacivert-kırmızı-beyaz) ve açık/koyu tema seçeneği
+(function(){
+  var st=document.createElement('style');
+  st.textContent=':root{--bg:#0A1426;--surface:#112040;--ink:#F2F5FA;--muted:#93A3BF;--line:#26385E;--accent:#E0313F;--accent-ink:#fff}'+
+   ':root[data-theme="light"]{--bg:#EDF0F6;--surface:#FFFFFF;--ink:#0E1B33;--muted:#55627C;--line:#CBD3E2;--accent:#C8102E;--accent-ink:#fff}'+
+   '#mnbar{border-bottom:3px solid var(--accent)!important}'+
+   
+   '#mndr .mh{border-left:5px solid var(--accent);margin:0 0 4px}#mndr #thbtn{display:flex;align-items:center;justify-content:space-between}#thbtn .sw{flex:none;width:52px;height:32px;border-radius:16px;background:#8a94a6;position:relative;transition:background .2s}#thbtn .sw::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4);transition:transform .2s}#thbtn[aria-checked="true"] .sw{background:var(--accent)}#thbtn[aria-checked="true"] .sw::after{transform:translateX(20px)}@media(prefers-reduced-motion:reduce){#thbtn .sw,#thbtn .sw::after{transition:none}}';
+  document.head.appendChild(st);
+})();
+function themeGet(){var t='dark';try{t=localStorage.getItem('pp_theme')||'dark';}catch(x){}return t==='light'?'light':'dark';}
+function themeApply(t){
+  var r=document.documentElement;if(!r||!r.removeAttribute)return;
+  if(t==='light')r.setAttribute('data-theme','light');else r.removeAttribute('data-theme');
+  var m=document.querySelector&&document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',t==='light'?'#EDF0F6':'#0A1426');
+  var b=document.getElementById('thbtn');if(b){b.setAttribute('aria-checked',t==='dark'?'true':'false');}
+}
+function themeToggle(){var t=themeGet()==='light'?'dark':'light';try{localStorage.setItem('pp_theme',t);}catch(x){}themeApply(t);}
+themeApply(themeGet());
+var _mnbTh=mnBuild;
+mnBuild=function(){
+  _mnbTh.apply(this,arguments);
+  var dr=document.getElementById('mndr');
+  if(dr&&!document.getElementById('thbtn')){
+    var out=[].slice.call(dr.querySelectorAll('button')).filter(function(x){return /Çıkış/.test(x.textContent);})[0];
+    var b=document.createElement('button');b.id='thbtn';b.type='button';b.className='mi';b.setAttribute('role','switch');b.innerHTML='<span>Koyu tema</span><span class="sw"></span>';b.onclick=themeToggle;
+    if(out)out.parentNode.insertBefore(b,out);else dr.appendChild(b);
+  }
+  themeApply(themeGet());
 };
 
 // ---- Uygulama olarak yükleme (PWA)
