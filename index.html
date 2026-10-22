@@ -1911,7 +1911,7 @@ function vMe(){
   var h=vPrev(),i=h.indexOf('<div class="grp">');
   if(i<0)i=h.indexOf('<div class="empty">');
   var body=i>=0?h.slice(i):'';
-  var top='<div class="row" style="align-items:center;gap:14px;margin-bottom:6px;flex-wrap:nowrap">'+av(a,80)+'<div><h1 style="margin:0">Merhaba, '+esc(a.n.split(' ')[0])+'</h1><p class="sub" style="margin:2px 0 0">'+esc(a.n)+'</p></div></div>'+
+  var top='<div class="row" style="align-items:center;gap:14px;margin-bottom:6px;flex-wrap:nowrap">'+av(a,56)+'<div><h1 style="margin:0;font-size:22px">Merhaba, '+esc(a.n.split(' ')[0])+'</h1><p class="sub" style="margin:2px 0 0">'+esc(a.n)+'</p></div></div>'+
     '<div class="row" style="margin:6px 0 16px"><label class="btn small ghost" for="myph" style="cursor:pointer">'+(a.ph?'Fotoğrafı değiştir':'Fotoğraf ekle')+'</label><input id="myph" type="file" accept="image/*" style="display:none" onchange="setMyPhoto(this)">'+(a.ph?'<button class="btn small ghost" onclick="savePhoto(null)">Kaldır</button>':'')+'</div>';
   return top+body;
 }
@@ -2986,7 +2986,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792676656;
+var BUILD_ID=1792700185;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3501,7 +3501,7 @@ function mnGo(k){
 
 // Antrenör ve hoca açılış sayfası
 function vHome(){
-  var h='<div class="hero"><small>FETHİYESPOR</small><h1>U19 Performans Paneli</h1><p class="sub" style="margin:0">'+trDate(today())+'</p></div>';
+  var h='<div class="hero"><h1>Fethiyespor</h1><p class="sub" style="margin:0">'+trDate(today())+'</p></div>';
   var cs=[],act=db.athletes.filter(function(a){return !a.arch;});
   cs.push(['athletes',db.athletes.length,'Sporcu']);
   if(mnCan('survey')){
@@ -3615,7 +3615,7 @@ vMe=function(){
   if(meSec==='home'){
     var sub={prog:'Bugünkü egzersizler',survey:'Anketini doldur',tests:'Son test sonuçların',gps:'Son 7 gün özeti',matches:'Maç istatistiklerin'};
     var lab={prog:'Programım',survey:'Günlük anket',tests:'Testlerim',gps:'GPS özetim',matches:'Maçlarım'};
-    return '<div class="hero" style="margin-bottom:16px"><small>FETHİYESPOR</small><h1>U19 Performans Paneli</h1><p class="sub" style="margin:0">'+trDate(today())+'</p></div>'+top+'<div class="hgrid">'+Object.keys(lab).filter(function(k){return ok.indexOf(k)>-1;}).map(function(k){return '<button type="button" class="hcard" onclick="mnGo(\''+k+'\')"><b style="font-size:19px">'+lab[k]+'</b><span>'+sub[k]+'</span></button>';}).join('')+'</div>';
+    return '<div class="hero" style="margin-bottom:16px"><h1>Fethiyespor</h1><p class="sub" style="margin:0">'+trDate(today())+'</p></div>'+top+'<div class="hgrid">'+Object.keys(lab).filter(function(k){return ok.indexOf(k)>-1;}).map(function(k){return '<button type="button" class="hcard" onclick="mnGo(\''+k+'\')"><b style="font-size:17px">'+lab[k]+'</b></button>';}).join('')+'</div>';
   }
   var a=ath(ME);
   return '<h1 style="margin-bottom:0">'+esc(a.n.split(' ')[0])+'</h1>'+(secs[meSec]||'<div class="empty"><p>Bu bölüm için henüz veri yok.</p></div>');
@@ -3751,7 +3751,7 @@ bodySvg=function(v,mode,data){
    ':root[data-theme="light"]{--bg:#EDF0F6;--surface:#FFFFFF;--ink:#0E1B33;--muted:#55627C;--line:#CBD3E2;--accent:#C8102E;--accent-ink:#fff}'+
    '#mnbar{border-bottom:3px solid var(--accent)!important}'+
    
-   '#mndr .mh{font-size:20px;font-weight:800;letter-spacing:.05em;padding:8px 18px 14px}#mndr .mh small{font-size:13px;font-weight:600;margin-top:3px}#mndr .mg{font-size:15px;font-weight:800;letter-spacing:.1em;color:var(--ink);padding:16px 18px}#mndr .mg i{color:var(--muted);font-size:15px}#mndr button.mi{font-size:17px;font-weight:600;padding:12px 18px;line-height:1.25}#mndr button.mi.sub{font-size:16.5px}#mndr button.mi.sub2{font-size:15.5px;font-weight:500}#mndr button.mi[aria-current="page"]{font-weight:800;background:var(--bg)}#mndr #thbtn span:first-child{font-weight:600}#mndr button.mi.sub,#mndr button.mi.sub2{font-style:italic}'+
+   '#mndr .mh{font-size:20px;font-weight:800;letter-spacing:.05em;padding:8px 18px 14px}#mndr .mh small{font-size:13px;font-weight:600;margin-top:3px}#mndr .mg{font-size:15px;font-weight:800;letter-spacing:.1em;color:var(--ink);padding:16px 18px}#mndr .mg i{color:var(--muted);font-size:15px}#mndr button.mi{font-size:17px;font-weight:600;padding:12px 18px;line-height:1.25}#mndr button.mi.sub{font-size:16.5px}#mndr button.mi.sub2{font-size:15.5px;font-weight:500}#mndr button.mi[aria-current="page"]{font-weight:800;background:var(--bg)}#mndr #thbtn span:first-child{font-weight:600}.hero{min-height:200px!important;padding:16px 16px}.hero h1{font-size:30px;line-height:1.1}@media(min-width:700px){.hero{min-height:240px!important}}.hcard{padding:12px 14px}#mndr button.mi.sub,#mndr button.mi.sub2{font-style:italic}'+
    '#mndr .mh{border-left:5px solid var(--accent);margin:0 0 4px}#mndr #thbtn{display:flex;align-items:center;justify-content:space-between}#thbtn .sw{flex:none;width:52px;height:32px;border-radius:16px;background:#8a94a6;position:relative;transition:background .2s}#thbtn .sw::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4);transition:transform .2s}#thbtn[aria-checked="true"] .sw{background:var(--accent)}#thbtn[aria-checked="true"] .sw::after{transform:translateX(20px)}@media(prefers-reduced-motion:reduce){#thbtn .sw,#thbtn .sw::after{transition:none}}';
   document.head.appendChild(st);
 })();
