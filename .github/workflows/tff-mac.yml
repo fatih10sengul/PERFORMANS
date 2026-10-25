@@ -1,0 +1,30 @@
+name: TFF maç verisi
+
+on:
+  schedule:
+    - cron: '0 14 * * 4'   # Her Perşembe 17:00 (Türkiye saati)
+  workflow_dispatch:        # Elle çalıştırma düğmesi
+
+permissions:
+  contents: write
+  pages: write
+
+jobs:
+  guncelle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Yeni maçları TFF'den al
+        run: python3 scripts/tff_update.py
+      - name: Değişiklik varsa kaydet ve yayınla
+        if: success() || failure()
+        run: |
+          if git diff --quiet; then echo "Değişiklik yok"; exit 0; fi
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add index.html sw.js
+          git commit -m "Maç verisi: TFF'den otomatik güncelleme"
+          git push
+          gh api -X POST "repos/${{ github.repository }}/pages/builds" || true
+        env:
+          GH_TOKEN: ${{ github.token }}
