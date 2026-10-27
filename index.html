@@ -2715,7 +2715,7 @@ render=function(){
 };
 
 // ---- GYM: hareket havuzu (tür > alt başlık; Kuvvet hareket tipine veya kas grubuna göre)
-SETK.push('exPool');SETK.push('exCats');SETK.push('poolV');
+SETK.push('exPool');SETK.push('exCats');SETK.push('poolV');SETK.push('poolSeed');
 var POOLT=['Aktivasyon egzersizleri','Kuvvet','Upper body','Kontrast','Plyometrik / Power','Core','Mobilite'];
 var POOLS={'Kuvvet':['Diz baskın','Kalça baskın'],'Upper body':['İtiş','Çekiş'],'Core':['Stabilizasyon','Kuvvet','Power']};
 var POOLM=['Quadriceps','Hamstring','Kalça','Baldır','Groin'];
@@ -2748,6 +2748,13 @@ function poolSetup(){
   });});
   db.exCats=undefined;db.poolV=4;return true;
 }
+var POOLSEED=[["Back Squat","Kuvvet","Diz baskın","Quadriceps"],["Front Squat","Kuvvet","Diz baskın","Quadriceps"],["Goblet Squat (topuk altı plakalı)","Kuvvet","Diz baskın","Quadriceps"],["Bulgarian Split Squat","Kuvvet","Diz baskın","Quadriceps"],["Geri Lunge (dumbbell)","Kuvvet","Diz baskın","Quadriceps"],["Step-Up (yüksek kutu)","Kuvvet","Diz baskın","Quadriceps"],["Tek Bacak Leg Press","Kuvvet","Diz baskın","Quadriceps"],["Spanish Squat (izometrik, bantla)","Kuvvet","Diz baskın","Quadriceps"],["Reverse Nordic Curl","Kuvvet","Diz baskın","Quadriceps"],["Leg Extension (eksantrik yavaş iniş)","Kuvvet","Diz baskın","Quadriceps"],["Romanian Deadlift","Kuvvet","Kalça baskın","Hamstring"],["Tek Bacak Romanian Deadlift","Kuvvet","Kalça baskın","Hamstring"],["B-Stance Romanian Deadlift","Kuvvet","Kalça baskın","Hamstring"],["Nordic Hamstring Curl","Kuvvet","Kalça baskın","Hamstring"],["Lying Leg Curl","Kuvvet","Kalça baskın","Hamstring"],["Seated Leg Curl","Kuvvet","Kalça baskın","Hamstring"],["Slider Leg Curl","Kuvvet","Kalça baskın","Hamstring"],["Stability Ball Leg Curl","Kuvvet","Kalça baskın","Hamstring"],["Good Morning","Kuvvet","Kalça baskın","Hamstring"],["45° Back Extension (hamstring odaklı)","Kuvvet","Kalça baskın","Hamstring"],["Barbell Hip Thrust","Kuvvet","Kalça baskın","Kalça"],["Tek Bacak Hip Thrust","Kuvvet","Kalça baskın","Kalça"],["Tek Bacak Glute Bridge","Kuvvet","Kalça baskın","Kalça"],["Cable Pull-Through","Kuvvet","Kalça baskın","Kalça"],["Kettlebell Swing","Kuvvet","Kalça baskın","Kalça"],["Trap Bar Deadlift","Kuvvet","Kalça baskın","Kalça"],["Sumo Deadlift","Kuvvet","Kalça baskın","Kalça"],["Curtsy Lunge","Kuvvet","Kalça baskın","Kalça"],["Kablo Glute Kickback","Kuvvet","Kalça baskın","Kalça"],["Hip Abduction (makine veya bantlı)","Kuvvet","Kalça baskın","Kalça"],["Standing Calf Raise","Kuvvet","","Baldır"],["Tek Bacak Calf Raise","Kuvvet","","Baldır"],["Seated Calf Raise","Kuvvet","","Baldır"],["Leg Press Calf Raise","Kuvvet","","Baldır"],["Eksantrik Heel Drop (basamak)","Kuvvet","","Baldır"],["Bent-Knee Tek Bacak Calf Raise","Kuvvet","","Baldır"],["İzometrik Calf Hold (ağırlıklı)","Kuvvet","","Baldır"],["Tibialis Raise","Kuvvet","","Baldır"],["Toe Walk (parmak ucu yürüyüş, yüklü)","Kuvvet","","Baldır"],["Hızlı Kısa Yollu Calf Raise","Kuvvet","","Baldır"],["Copenhagen Plank","Kuvvet","","Groin"],["Kısa Kol Copenhagen Plank (dizden)","Kuvvet","","Groin"],["Side-Lying Hip Adduction","Kuvvet","","Groin"],["Kablo Hip Adduction","Kuvvet","","Groin"],["Adductor Makinesi","Kuvvet","","Groin"],["Lateral Lunge","Kuvvet","","Groin"],["Cossack Squat","Kuvvet","","Groin"],["Slider Lateral Lunge","Kuvvet","","Groin"],["Top Sıkıştırma Adduction (sırtüstü, izometrik)","Kuvvet","","Groin"],["Sumo Goblet Squat","Kuvvet","","Groin"],["Incline Dumbbell Press","Upper body","İtiş",""],["Dumbbell Bench Press","Upper body","İtiş",""],["Tek Kol Dumbbell Press","Upper body","İtiş",""],["Push-Up (ağırlıklı yelekli)","Upper body","İtiş",""],["Standing Dumbbell Shoulder Press","Upper body","İtiş",""],["Half-Kneeling Tek Kol Press","Upper body","İtiş",""],["Arnold Press","Upper body","İtiş",""],["Dips (destekli)","Upper body","İtiş",""],["Kablo Chest Press (ayakta tek kol)","Upper body","İtiş",""],["Overhead Triceps Extension (kablo)","Upper body","İtiş",""],["Pull-Up","Upper body","Çekiş",""],["Chin-Up","Upper body","Çekiş",""],["Lat Pulldown","Upper body","Çekiş",""],["Tek Kol Dumbbell Row","Upper body","Çekiş",""],["Chest-Supported Row","Upper body","Çekiş",""],["Inverted Row (TRX)","Upper body","Çekiş",""],["Bent-Over Barbell Row","Upper body","Çekiş",""],["Face Pull","Upper body","Çekiş",""],["Straight-Arm Pulldown","Upper body","Çekiş",""],["Reverse Fly (arka omuz)","Upper body","Çekiş",""],["Side Plank","Core","Stabilizasyon",""],["Dead Bug","Core","Stabilizasyon",""],["Bird Dog","Core","Stabilizasyon",""],["Pallof Press","Core","Stabilizasyon",""],["Stir-the-Pot (stability ball)","Core","Stabilizasyon",""],["Body Saw","Core","Stabilizasyon",""],["Hollow Body Hold","Core","Stabilizasyon",""],["Suitcase Carry","Core","Stabilizasyon",""],["Plank Shoulder Tap","Core","Stabilizasyon",""],["Bear Crawl Hold","Core","Stabilizasyon",""],["Ab Wheel Rollout","Core","Kuvvet",""],["Hanging Leg Raise","Core","Kuvvet",""],["Hanging Knee Raise","Core","Kuvvet",""],["Cable Woodchop (yüksekten alçağa)","Core","Kuvvet",""],["Cable Crunch","Core","Kuvvet",""],["Decline Sit-Up (yüklü)","Core","Kuvvet",""],["Reverse Crunch","Core","Kuvvet",""],["Landmine Rotation","Core","Kuvvet",""],["V-Up","Core","Kuvvet",""],["Dragon Flag (ileri seviye)","Core","Kuvvet",""],["Med Ball Rotational Throw (duvara, yandan)","Core","Power",""],["Med Ball Slam","Core","Power",""],["Med Ball Overhead Throw","Core","Power",""],["Med Ball Scoop Toss","Core","Power",""],["Med Ball Shot-Put Throw","Core","Power",""],["Med Ball Chest Pass (duvara)","Core","Power",""],["Med Ball Rotational Slam","Core","Power",""],["Med Ball Side Toss (adım atarak)","Core","Power",""],["Hızlı Russian Twist (med ball)","Core","Power",""],["Med Ball Tek Bacak Overhead Throw","Core","Power",""]];
+function poolSeedAdd(){
+  var d=db.poolSeed||[];if(d.indexOf('v1')>-1)return false;
+  var L=poolList(),have={};L.forEach(function(e){have[(e.n||'').toLowerCase()]=1;});
+  POOLSEED.forEach(function(r){var k=r[0].toLowerCase();if(have[k])return;have[k]=1;L.push({id:uid(),n:r[0],t:r[1],s:r[2],m:r[3],sets:'',reps:'',url:'',note:''});});
+  db.poolSeed=d.concat(['v1']);return true;
+}
 function poolVid(e){
   if(!e.url)return '<span class="dim">Video yok</span>';
   return e.url.split('|').map(function(u,i,a){return '<a class="chip c-ok" href="'+esc(u.trim())+'" target="_blank" rel="noopener noreferrer">Video'+(a.length>1?' '+(i+1):'')+'</a>';}).join(' ');
@@ -2775,7 +2782,7 @@ function poolSelS(t,s){
 }
 function poolTChg(t){var w=document.getElementById('pl-sw');if(w)w.innerHTML=poolSelS(t,'');}
 function vPool(){
-  if(!STAFF&&poolSetup())save();
+  if(!STAFF){var _c1=poolSetup(),_c2=poolSeedAdd();if(_c1||_c2)save();}
   var all=poolList(),h='<h1>GYM</h1><p class="sub">Tüm hareketlerin burada durur. Günlere buradan atanır. Sporcu burayı görmez, yalnızca senin atadıklarını görür.</p>';
   poolTypes().forEach(function(T){
     var L=all.filter(function(e){return (e.t||'Türsüz')===T;}),open=poolOpen===T;
@@ -3103,7 +3110,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793134756;
+var BUILD_ID=1793135536;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
