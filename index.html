@@ -2714,6 +2714,55 @@ render=function(){
   _rdH();
 };
 
+// ---- Hareket havuzu (grup grup tüm hareketler; günlere buradan atanır)
+SETK.push('exPool');SETK.push('exCats');
+var POOLC=['Diz baskın','Kalça baskın','Upper body','Core','Plyometrik','Mobilite'];
+var poolCat='',poolEd='';
+function poolCats(){return Array.isArray(db.exCats)&&db.exCats.length?db.exCats:POOLC;}
+function poolList(){if(!Array.isArray(db.exPool))db.exPool=[];return db.exPool;}
+function vPool(){
+  var cats=poolCats(),all=poolList(),cur=poolCat&&cats.indexOf(poolCat)>-1?poolCat:'';
+  var L=all.filter(function(e){return !cur||e.c===cur;});
+  var ed=poolEd?all.filter(function(e){return e.id===poolEd;})[0]:null;
+  var h='<button class="back" onclick="go(\'prog\')">Programa dön</button><h1>Hareket havuzu</h1><p class="sub">Tüm hareketlerin burada durur. Günlere buradan atanır. Sporcu havuzu görmez, yalnızca senin atadıklarını görür.</p>';
+  h+='<div class="row" style="gap:6px;margin:12px 0;flex-wrap:wrap"><button class="btn small'+(cur?' ghost':'')+'" onclick="poolSetC(-1)">Tümü ('+all.length+')</button>'+cats.map(function(c,i){var n=all.filter(function(e){return e.c===c;}).length;return '<button class="btn small'+(c===cur?'':' ghost')+'" onclick="poolSetC('+i+')">'+esc(c)+' ('+n+')</button>';}).join('')+'</div>';
+  h+='<div class="list">'+(L.length?L.map(function(e){return '<div class="rank"><div class="top"><span><b>'+esc(e.n)+'</b><br><span class="dim">'+esc(e.c||'Grupsuz')+(e.sets||e.reps?' · '+esc(e.sets||'-')+(e.reps?' x '+esc(e.reps):''):'')+'</span></span>'+vidLink(e)+'</div>'+(e.note?'<div class="dim" style="margin-top:4px">'+esc(e.note)+'</div>':'')+'<div class="row" style="margin-top:8px;gap:6px"><button class="btn small ghost" onclick="poolEdit(\''+e.id+'\')">Düzenle</button><button class="btn small danger" onclick="poolDel(\''+e.id+'\')">'+(pendingDel==='pl'+e.id?'Silmeyi onayla':'Sil')+'</button></div></div>';}).join(''):'<div class="empty"><p>'+(cur?'Bu grupta hareket yok.':'Havuz boş. Aşağıdan ilk hareketi ekle.')+'</p></div>')+'</div>';
+  var v=function(k){return ed?esc(ed[k]||''):'';};
+  h+='<div class="form" id="pl-form"><b>'+(ed?'Hareketi düzenle':'Hareket ekle')+'</b><label for="pl-n">Hareket adı</label><input id="pl-n" value="'+v('n')+'"><label for="pl-c">Grup</label><select id="pl-c">'+cats.map(function(c){return '<option'+((ed?ed.c===c:c===cur)?' selected':'')+'>'+esc(c)+'</option>';}).join('')+'</select>'
+   +'<div class="two"><div><label for="pl-s">Set</label><input id="pl-s" inputmode="numeric" placeholder="3" value="'+v('sets')+'"></div><div><label for="pl-r">Tekrar veya süre</label><input id="pl-r" placeholder="12 ya da 30 sn" value="'+v('reps')+'"></div></div>'
+   +'<label for="pl-u">Video bağlantısı (isteğe bağlı)</label><input id="pl-u" inputmode="url" placeholder="https://..." value="'+v('url')+'"><label for="pl-t">Yapılış notu (isteğe bağlı)</label><input id="pl-t" value="'+v('note')+'">'
+   +'<div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="poolSave()">'+(ed?'Güncelle':'Havuza ekle')+'</button>'+(ed?'<button class="btn ghost" onclick="poolEd=\'\';render()">Vazgeç</button>':'')+'</div></div>';
+  h+='<div class="form"><b>Yeni grup ekle</b><label for="pl-nc">Grup adı</label><input id="pl-nc" placeholder="Örn. Sprint"><div class="row" style="margin-top:12px"><button class="btn ghost" onclick="poolCatAdd()">Grup ekle</button></div></div>';
+  return h;
+}
+function poolSetC(i){poolCat=i<0?'':poolCats()[i];poolEd='';render();}
+function poolSave(){
+  var n=document.getElementById('pl-n').value.trim(),u=document.getElementById('pl-u').value.trim();
+  if(!n){toast('Hareket adı gerekli.');return;}
+  if(u&&!/^https?:\/\//i.test(u)){toast('Bağlantı https:// ile başlamalı.');return;}
+  var c=document.getElementById('pl-c').value,L=poolList(),o={n:n,c:c,sets:document.getElementById('pl-s').value.trim(),reps:document.getElementById('pl-r').value.trim(),url:u,note:document.getElementById('pl-t').value.trim()};
+  if(poolEd){L.forEach(function(e){if(e.id===poolEd)Object.assign(e,o);});}
+  else{o.id=uid();L.push(o);}
+  poolCat=c;var was=poolEd;poolEd='';save();render();toast(was?'Hareket güncellendi':'Havuza eklendi');
+}
+function poolEdit(id){poolEd=id;render();var f=document.getElementById('pl-form');if(f&&f.scrollIntoView)f.scrollIntoView();}
+function poolDel(id){if(pendingDel!=='pl'+id){pendingDel='pl'+id;render();return;}db.exPool=poolList().filter(function(e){return e.id!==id;});pendingDel=null;save();render();toast('Hareket silindi');}
+function poolCatAdd(){
+  var n=document.getElementById('pl-nc').value.trim();
+  if(!n){toast('Grup adı gerekli.');return;}
+  var c=poolCats().slice();
+  if(c.some(function(x){return x.toLowerCase()===n.toLowerCase();})){toast('Bu grup zaten var.');return;}
+  c.push(n);db.exCats=c;poolCat=n;save();render();toast('Grup eklendi');
+}
+var _vprPl=vProg;
+vProg=function(){var h=_vprPl();return h.replace('<button class="btn ghost" onclick="go(\'hiit\')">HIIT mesafe hesaplama</button>','<button class="btn ghost" onclick="go(\'pool\')">Hareket havuzu</button><button class="btn ghost" onclick="go(\'hiit\')">HIIT mesafe hesaplama</button>');};
+var _rdPl=render;
+render=function(){
+  if(ROLE==='coach'&&view==='pool'){document.getElementById('app').innerHTML=vPool();if(typeof setNav==='function')setNav();return;}
+  _rdPl();
+};
+(function(){var st=document.createElement('style');st.textContent=['poolSave(','poolDel(','poolCatAdd(','poolEdit('].map(function(h){return 'body.ro [onclick*="'+h+'"]';}).join(',')+'{display:none!important}';document.head.appendChild(st);})();
+
 // ---- Raporlarda test tarihleri
 function histTable(a,max,rep,filt){
   if(!rep){
@@ -2986,7 +3035,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1792753812;
+var BUILD_ID=1793053966;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3320,7 +3369,7 @@ chrome=function(){
   Object.keys(h).forEach(function(k){var b=document.getElementById('n-'+k);if(b)b.style.display=(STAFF&&!STP[h[k]])?'none':'';});
   var bs=document.getElementById('n-staff');if(bs)bs.style.display=STAFF?'none':'';
 };
-var VPERM={load:'load',gps:'gps',prog:'prog',inbox:'survey',team:'tests',matches:'matches',hiit:'prog',invites:'x',entry:'x',prev:'x',staff:'x'};
+var VPERM={load:'load',gps:'gps',prog:'prog',inbox:'survey',team:'tests',matches:'matches',hiit:'prog',pool:'prog',invites:'x',entry:'x',prev:'x',staff:'x'};
 function stRpc(id,perms,on){return SBC.rpc('set_staff',{target:id,p:perms,enable:on});}
 async function loadStaff(){
   STLOAD=true;
@@ -3426,7 +3475,7 @@ function mnCur(){
   if(ROLE==='athlete')return meSec;
   if(view==='profile'||view==='prev')return 'athletes';
   if(view==='entry')return 'testup';
-  if(view==='hiit')return 'prog';
+  if(view==='hiit'||view==='pool')return 'prog';
   if(view==='load')return loadMode==='target'?'loadtarget':loadMode==='week'?'loadweek':'load';
   if(view==='gps')return gpsMode==='ssg'?'gpsssg':'gpsday';
   return view;
