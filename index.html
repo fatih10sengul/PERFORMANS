@@ -2912,6 +2912,10 @@ async function annSend(){
   var r=await SBC.from('announcement').upsert(row);
   if(r.error){toast(/announcement|PGRST205|relation|schema cache/i.test((r.error.message||'')+(r.error.code||''))?'Mesaj için veritabanı güncellemesi gerekiyor.':'Gönderilemedi: '+(r.error.message||''));render();return;}
   ANN={mid:row.mid,body:row.body,img:row.img||'',at:row.updated_at,exp:row.expires_at};annSeenSet(row.mid);annDraft={t:'',img:''};annDot();render();toast('Mesaj gönderildi');
+  try{
+    var pr=await SBC.functions.invoke('send-push',{body:{title:'FETHİYESPOR U19',body:row.body?row.body.slice(0,140):'Yeni fotoğraf mesajı'}});
+    if(pr.error)toast('Mesaj gitti, ama bildirim gönderilemedi.');
+  }catch(e){toast('Mesaj gitti, ama bildirim gönderilemedi.');}
 }
 async function annClear(){
   if(pendingDel!=='annclr'){pendingDel='annclr';render();return;}
@@ -3208,7 +3212,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793277363;
+var BUILD_ID=1793302994;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -4190,6 +4194,51 @@ function vFlow(){
   return h+'<div class="fl-w">'+out+'</div><p class="dim" style="margin:10px 0 0">Her satırda altta hedef bandı, sağda gerçekleşen değer yazar. Yeşil: hedefte, mavi: eksik, kırmızı: fazla. Hedefleri Günlük hedef sayfasından değiştirebilirsin.</p>';
 }
 (function(){var st=document.createElement('style');st.textContent='.fl-w{display:grid;grid-template-columns:1fr;gap:10px}@media(min-width:700px){.fl-w{grid-template-columns:repeat(3,1fr)}}.fl-c{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:linear-gradient(180deg,var(--surface),var(--bg))}.fl-c.on{border-color:#e0b04a;box-shadow:0 0 0 1px #e0b04a}.fl-c.fut{opacity:.78}.fl-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}.fl-h b{font-size:17px}.fl-h span{font-size:12px;color:var(--muted)}.fl-t{margin-left:auto;font-style:normal;font-size:10px;letter-spacing:.12em;color:#e0b04a;font-weight:700}.fl-b{display:grid;grid-template-columns:1fr 1fr;column-gap:14px}.fl-r{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 0;border-top:1px solid var(--line);font-size:13px}.fl-r>span:first-child{flex:1}.fl-g{display:block;color:var(--muted);font-size:11px}.fl-v{text-align:right;font-weight:700;font-size:12.5px}.fl-n{margin:6px 0 0;font-size:12px;color:var(--muted)}';document.head.appendChild(st);})();
+
+// ---- Bildirim (web push)
+var PUSHKEY='BM_5ABFQ7KcHCDKMxBLYHTWSAmwUz8iOmH2cql3IAQ0mDpq2mhZkKorlEF5D7y1BKQA_UIhFFFZSrG1OaEZxQgg';
+function pushOK(){return 'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window&&location.protocol==='https:';}
+function pushIOSweb(){var ios=/iphone|ipad|ipod/i.test(navigator.userAgent);var sa=window.navigator.standalone===true||(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches);return ios&&!sa;}
+function pushKey(){var p='='.repeat((4-PUSHKEY.length%4)%4),b=(PUSHKEY+p).replace(/-/g,'+').replace(/_/g,'/'),r=atob(b),o=new Uint8Array(r.length);for(var i=0;i<r.length;i++)o[i]=r.charCodeAt(i);return o;}
+async function pushSave(sub){
+  var j=sub.toJSON();
+  var r=await SBC.from('push_sub').upsert({endpoint:j.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth,role:ROLE||null},{onConflict:'endpoint'});
+  return !r.error;
+}
+async function pushOn(){
+  try{
+    var perm=await Notification.requestPermission();
+    if(perm!=='granted'){toast('Bildirim izni verilmedi.');render();return;}
+    var reg=await navigator.serviceWorker.ready;
+    var sub=await reg.pushManager.getSubscription();
+    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:pushKey()});
+    var ok=await pushSave(sub);
+    toast(ok?'Bildirimler açıldı':'Bildirim kaydedilemedi, bildirim kurulumu tamamlanmamış olabilir.');
+  }catch(e){toast('Bildirim açılamadı.');}
+  render();
+}
+var PUSHSYNC=false;
+async function pushSync(){
+  if(PUSHSYNC||!pushOK()||!SBC||!ROLE||ROLE==='none'||Notification.permission!=='granted')return;
+  PUSHSYNC=true;
+  try{var reg=await navigator.serviceWorker.ready;var sub=await reg.pushManager.getSubscription();if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:pushKey()});await pushSave(sub);}catch(e){}
+}
+var _rdPs=render;
+render=function(){
+  _rdPs();
+  try{
+    if(!ROLE||ROLE==='none'||!navHome())return;
+    pushSync();
+    var app=document.getElementById('app');if(!app||document.getElementById('pushcard'))return;
+    var c=null;
+    if(pushIOSweb())c='<b>Bildirim almak için</b><span>Önce uygulamayı ana ekrana ekle (Paylaş, sonra Ana Ekrana Ekle), oradan aç.</span>';
+    else if(pushOK()&&Notification.permission==='default')c='<b>Mesaj bildirimleri</b><span>Antrenörün mesaj attığında telefonuna bildirim gelsin.</span><button class="btn small" onclick="pushOn()">Bildirimleri aç</button>';
+    if(!c)return;
+    var d=document.createElement('div');d.id='pushcard';d.className='pushcard';d.innerHTML=c;
+    var hero=app.querySelector('.hero');if(hero&&hero.nextSibling)app.insertBefore(d,hero.nextSibling);else app.insertBefore(d,app.firstChild);
+  }catch(e){}
+};
+(function(){var st=document.createElement('style');st.textContent='.pushcard{display:flex;flex-direction:column;gap:6px;align-items:flex-start;margin:8px 0;padding:12px 14px;border:1px solid var(--line);border-left:4px solid #e0b04a;border-radius:10px;background:linear-gradient(180deg,var(--surface),var(--bg));font-size:14px}.pushcard span{color:var(--muted);font-size:13px}';document.head.appendChild(st);})();
 var _vhPt=vHome;
 vHome=function(){
   var h=_vhPt(),k='<p class="dim">Sol üstteki üç çizgi';

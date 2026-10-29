@@ -1,6 +1,6 @@
 // Basit önbellek: uygulama dosyaları önce ağdan alınır, ağ yoksa önbellekten açılır.
 // Supabase istekleri (başka alan adı) ve kullanıcı verisi hiçbir zaman önbelleğe alınmaz.
-const C = 'pp-v92';
+const C = 'pp-v93';
 const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(C).then(c => c.addAll(SHELL)).catch(() => {}));
@@ -19,4 +19,25 @@ self.addEventListener('fetch', e => {
       return r;
     }).catch(() => caches.match(e.request))
   );
+});
+
+// Bildirimler: antrenör mesaj attığında telefona bildirim düşer.
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (x) { d = { body: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'FETHİYESPOR U19', {
+    body: d.body || 'Yeni mesaj',
+    icon: './icon-192.png',
+    badge: './icon-192.png',
+    tag: 'pp-msg',
+    renotify: true,
+    data: { url: './' }
+  }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(l => {
+    for (const c of l) { if ('focus' in c) return c.focus(); }
+    return self.clients.openWindow('./');
+  }));
 });
