@@ -3212,7 +3212,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793302994;
+var BUILD_ID=1793304175;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -4223,22 +4223,55 @@ async function pushSync(){
   PUSHSYNC=true;
   try{var reg=await navigator.serviceWorker.ready;var sub=await reg.pushManager.getSubscription();if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:pushKey()});await pushSave(sub);}catch(e){}
 }
+function pushSt(){
+  if(pushIOSweb())return 'ios';
+  if(!pushOK())return 'na';
+  var p=Notification.permission;return p==='granted'?'ok':p==='denied'?'denied':'ask';
+}
+function pushGate(){
+  var g=document.getElementById('pushgate');
+  var need=ROLE&&ROLE!=='none'&&(ROLE==='athlete'||STAFF),st=need?pushSt():'ok';
+  if(!need||st==='ok'||st==='na'){if(g)g.remove();return;}
+  var h='<div class="pg-b"><div class="pg-t">FETHİYESPOR U19</div><h2>Bildirimleri aç</h2>';
+  if(st==='ios')h+='<p>Antrenörün mesajlarını alabilmek için uygulamayı ana ekrana eklemen gerekiyor.</p><ol><li>Safari\'de alttaki <b>Paylaş</b> düğmesine bas.</li><li><b>Ana Ekrana Ekle</b>\'yi seç.</li><li>Ana ekrandaki <b>FETHİYESPOR U19</b> simgesinden uygulamayı aç.</li></ol><p class="dim">Burada bildirimi açman, ana ekrandan açtıktan sonra istenecek.</p>';
+  else if(st==='denied')h+='<p>Bildirim izni kapalı. Uygulamayı kullanmak için bildirimlerin açık olması gerekiyor.</p><ol><li>Telefonun <b>Ayarlar</b> bölümüne gir.</li><li><b>Bildirimler</b> içinde <b>FETHİYESPOR U19</b>\'u bul.</li><li><b>Bildirimlere İzin Ver</b>\'i aç.</li></ol><button class="btn" onclick="location.reload()">İzni verdim, yeniden dene</button>';
+  else h+='<p>Antrenörün attığı mesajları ve duyuruları anında görmen için bildirimler açık olmalı.</p><button class="btn" onclick="pushOn()">Bildirimleri aç</button>';
+  h+='</div>';
+  if(!g){g=document.createElement('div');g.id='pushgate';document.body.appendChild(g);}
+  if(g.getAttribute('data-s')!==st){g.setAttribute('data-s',st);g.innerHTML=h;}
+}
+var ANNOPEN=/[?&]m=1/.test(location.search);
+async function annOpen(){
+  if(!ROLE||ROLE==='none'){ANNOPEN=true;return;}
+  try{await annFetch();}catch(e){}
+  if(ROLE==='coach'&&!STAFF){view='msg';render();return;}
+  if(!annLive()){toast('Şu an aktif mesaj yok.');return;}
+  var o=document.getElementById('annov');if(o)o.remove();
+  o=document.createElement('div');o.id='annov';o.className='pcov';o.onclick=function(){o.remove();};
+  o.innerHTML='<div style="width:100%;max-width:420px;max-height:88vh;overflow:auto" onclick="event.stopPropagation()">'+annCard()+'<button class="btn" style="width:100%" onclick="document.getElementById(\'annov\').remove()">Kapat</button></div>';
+  document.body.appendChild(o);annDot();
+}
+try{if(navigator.serviceWorker)navigator.serviceWorker.addEventListener('message',function(e){if(e.data&&e.data.type==='open-msg')annOpen();});}catch(e){}
 var _rdPs=render;
 render=function(){
   _rdPs();
+  try{pushGate();}catch(e){}
+  try{
+    if(ANNOPEN&&ROLE&&ROLE!=='none'&&(ROLE!=='athlete'||pushSt()!=='ask')){ANNOPEN=false;try{history.replaceState(null,'',location.pathname);}catch(e){}annOpen();}
+  }catch(e){}
   try{
     if(!ROLE||ROLE==='none'||!navHome())return;
     pushSync();
     var app=document.getElementById('app');if(!app||document.getElementById('pushcard'))return;
     var c=null;
-    if(pushIOSweb())c='<b>Bildirim almak için</b><span>Önce uygulamayı ana ekrana ekle (Paylaş, sonra Ana Ekrana Ekle), oradan aç.</span>';
-    else if(pushOK()&&Notification.permission==='default')c='<b>Mesaj bildirimleri</b><span>Antrenörün mesaj attığında telefonuna bildirim gelsin.</span><button class="btn small" onclick="pushOn()">Bildirimleri aç</button>';
+    if(ROLE==='athlete'||STAFF)return;
+    if(pushOK()&&Notification.permission==='default')c='<b>Mesaj bildirimleri</b><span>Antrenörün mesaj attığında telefonuna bildirim gelsin.</span><button class="btn small" onclick="pushOn()">Bildirimleri aç</button>';
     if(!c)return;
     var d=document.createElement('div');d.id='pushcard';d.className='pushcard';d.innerHTML=c;
     var hero=app.querySelector('.hero');if(hero&&hero.nextSibling)app.insertBefore(d,hero.nextSibling);else app.insertBefore(d,app.firstChild);
   }catch(e){}
 };
-(function(){var st=document.createElement('style');st.textContent='.pushcard{display:flex;flex-direction:column;gap:6px;align-items:flex-start;margin:8px 0;padding:12px 14px;border:1px solid var(--line);border-left:4px solid #e0b04a;border-radius:10px;background:linear-gradient(180deg,var(--surface),var(--bg));font-size:14px}.pushcard span{color:var(--muted);font-size:13px}';document.head.appendChild(st);})();
+(function(){var st=document.createElement('style');st.textContent='#pushgate{position:fixed;inset:0;z-index:90;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto}.pg-b{width:100%;max-width:380px}.pg-t{font-size:12px;letter-spacing:.2em;font-weight:700;color:#e0b04a;margin-bottom:10px}.pg-b h2{font-size:28px;margin:0 0 12px}.pg-b p{color:var(--muted);line-height:1.5}.pg-b ol{padding-left:20px;line-height:1.7;margin:10px 0 16px}.pg-b .btn{width:100%;margin-top:10px}.pushcard{display:flex;flex-direction:column;gap:6px;align-items:flex-start;margin:8px 0;padding:12px 14px;border:1px solid var(--line);border-left:4px solid #e0b04a;border-radius:10px;background:linear-gradient(180deg,var(--surface),var(--bg));font-size:14px}.pushcard span{color:var(--muted);font-size:13px}';document.head.appendChild(st);})();
 var _vhPt=vHome;
 vHome=function(){
   var h=_vhPt(),k='<p class="dim">Sol üstteki üç çizgi';
