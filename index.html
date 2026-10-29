@@ -2840,6 +2840,7 @@ function poolDel(id){if(pendingDel!=='pl'+id){pendingDel='pl'+id;render();return
 var _rdPl=render;
 render=function(){
   if(ROLE==='coach'&&view==='pool'){document.getElementById('app').innerHTML=vPool();if(typeof setNav==='function')setNav();return;}
+  if(ROLE==='coach'&&view==='flow'){document.getElementById('app').innerHTML=vFlow();if(typeof setNav==='function')setNav();return;}
   if(ROLE==='coach'&&view==='rep'){document.getElementById('app').innerHTML=vRep();if(typeof setNav==='function')setNav();return;}
   _rdPl();
 };
@@ -3207,7 +3208,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793276906;
+var BUILD_ID=1793277363;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3541,7 +3542,7 @@ chrome=function(){
   Object.keys(h).forEach(function(k){var b=document.getElementById('n-'+k);if(b)b.style.display=(STAFF&&!STP[h[k]])?'none':'';});
   var bs=document.getElementById('n-staff');if(bs)bs.style.display=STAFF?'none':'';
 };
-var VPERM={load:'load',gps:'gps',prog:'prog',inbox:'survey',team:'tests',matches:'matches',hiit:'prog',pool:'prog',rep:'load',msg:'x',invites:'x',entry:'x',prev:'x',staff:'x'};
+var VPERM={load:'load',gps:'gps',prog:'prog',inbox:'survey',team:'tests',matches:'matches',hiit:'prog',pool:'prog',rep:'load',flow:'load',msg:'x',invites:'x',entry:'x',prev:'x',staff:'x'};
 function stRpc(id,perms,on){return SBC.rpc('set_staff',{target:id,p:perms,enable:on});}
 async function loadStaff(){
   STLOAD=true;
@@ -3635,7 +3636,7 @@ function mnItems(){
     {t:'',i:[['home','Ana sayfa']]},
     {t:'Sporcular',i:[['athletes','Sporcu listesi']]},
     {t:'Testler',i:[['testup','Veri yükle','!'],['team','Testler','tests']]},
-    {t:'GPS',i:[['rep','Günlük rapor','load'],['gpsup','Veri yükle','!'],['gpsday','GPS verileri','gps'],['load','ACWR','load'],['loadtarget','Günlük hedef','load'],['loadweek','Haftalık hedef','load'],['gpsssg','Küçük oyunlar (SSG)','gps']]},
+    {t:'GPS',i:[['rep','Günlük rapor','load'],['flow','Haftanın akışı','load'],['gpsup','Veri yükle','!'],['gpsday','GPS verileri','gps'],['load','ACWR','load'],['loadtarget','Günlük hedef','load'],['loadweek','Haftalık hedef','load'],['gpsssg','Küçük oyunlar (SSG)','gps']]},
     {t:'Antrenman ve takip',i:[['inbox','Gelen (anket ve ağrı)','survey'],['prog','Antrenman programı','prog'],['pool','GYM','prog'],['msg','Mesaj','x']]},
     {t:'Sistem',i:[['staff','Antrenörler','!'],['invites','Davet kodları','!']]},
     {t:'Maç verileri',i:[['matches','Maçlar','matches']]}
@@ -4159,6 +4160,36 @@ function vRep(){
   return h+'</div>';
 }
 (function(){var st=document.createElement('style');st.textContent='.rep4{grid-template-columns:repeat(4,1fr)!important;margin-top:12px}.rrow{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;font:inherit;color:var(--ink);background:linear-gradient(180deg,var(--surface),var(--bg));border:1px solid var(--line);border-left:4px solid var(--st);border-radius:10px;padding:10px 12px;margin-bottom:8px}.rr-no{font-size:22px;font-weight:800;min-width:34px;text-align:center}.rr-b{flex:1;font-size:14px}.rr-s{font-style:normal;float:right;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--st);font-weight:700}.rr-f{display:block;margin-top:4px;font-size:12.5px;color:var(--muted);line-height:1.45}';document.head.appendChild(st);})();
+
+// ---- Haftanın akışı: MD+1'den MD-1'e plan ve gerçekleşen (takım ortalaması, maç gününe göre %)
+var FLOWOFF=0;
+function vFlow(){
+  var td=today(),w=wd(td),back=(w-4+7)%7,st0=dAdd(td,-back-7*FLOWOFF),en0=dAdd(st0,6);
+  var ath0=act(),h='<h1>Haftanın akışı</h1><p class="sub">'+trDate(st0)+' - '+trDate(en0)+' · maç gününe göre %, takım ortalaması</p>';
+  h+='<div class="row" style="gap:6px;margin:8px 0 14px"><button class="btn small'+(FLOWOFF===0?'':' ghost')+'" onclick="FLOWOFF=0;render()">Bu hafta</button><button class="btn small'+(FLOWOFF===1?'':' ghost')+'" onclick="FLOWOFF=1;render()">Geçen hafta</button><button class="btn small'+(FLOWOFF===2?'':' ghost')+'" onclick="FLOWOFF=2;render()">2 hafta önce</button></div>';
+  if(!db.gps.length)return h+'<div class="empty"><p>Henüz GPS verisi yok.</p></div>';
+  var tg=TG(),i,out='';
+  for(i=0;i<7;i++){
+    var d=dAdd(st0,i),lab=MDT[wd(d)],isT=d===td,fut=d>td,tt=tg[lab];
+    var rows=ath0.map(function(a){return {a:a,rec:db.gps.filter(function(g){return g.a===a.id&&g.d===d})[0],rf:refT(a.id,d)};}).filter(function(r){return r.rec&&r.rf;});
+    var head='<div class="fl-h"><b>'+lab+'</b><span>'+WD[wd(d)]+' '+d.slice(8)+'.'+d.slice(5,7)+'</span>'+(isT?'<em class="fl-t">BUGÜN</em>':'')+'</div>';
+    var body='';
+    if(lab==='MD')body='<p class="fl-n">Maç günü, referans gün. Hedef yok.</p>';
+    else if(lab==='MD+2')body='<p class="fl-n">İzin günü.</p>';
+    else if(!tt)body='<p class="fl-n">Hedef tanımlı değil.</p>';
+    else{
+      body='<div class="fl-b">'+TV.map(function(t){
+        var k=t[0],r=tt[k],ps=rows.map(function(x){return x.rec[k]!=null&&x.rf[k]?x.rec[k]/x.rf[k]*100:null;}).filter(function(x){return x!=null;}),m=avgOf(ps);
+        var tr='%'+r[0]+'-'+r[1],cls='',val='<span class="fl-v dim">'+(fut?'plan':'-')+'</span>';
+        if(m!=null){var s2=stOf(lab,k,m);cls=s2?ST[s2][1]:'';val='<span class="fl-v '+cls+'">%'+Math.round(m)+(s2&&s2!=='ok'?' '+ST[s2][0]:'')+'</span>';}
+        return '<div class="fl-r"><span>'+t[2]+'<small class="fl-g">'+tr+'</small></span>'+val+'</div>';
+      }).join('')+'</div>'+(rows.length?'<p class="fl-n">'+rows.length+' oyuncu ölçüldü</p>':'');
+    }
+    out+='<div class="fl-c'+(isT?' on':'')+(fut?' fut':'')+'">'+head+body+'</div>';
+  }
+  return h+'<div class="fl-w">'+out+'</div><p class="dim" style="margin:10px 0 0">Her satırda altta hedef bandı, sağda gerçekleşen değer yazar. Yeşil: hedefte, mavi: eksik, kırmızı: fazla. Hedefleri Günlük hedef sayfasından değiştirebilirsin.</p>';
+}
+(function(){var st=document.createElement('style');st.textContent='.fl-w{display:grid;grid-template-columns:1fr;gap:10px}@media(min-width:700px){.fl-w{grid-template-columns:repeat(3,1fr)}}.fl-c{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:linear-gradient(180deg,var(--surface),var(--bg))}.fl-c.on{border-color:#e0b04a;box-shadow:0 0 0 1px #e0b04a}.fl-c.fut{opacity:.78}.fl-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}.fl-h b{font-size:17px}.fl-h span{font-size:12px;color:var(--muted)}.fl-t{margin-left:auto;font-style:normal;font-size:10px;letter-spacing:.12em;color:#e0b04a;font-weight:700}.fl-b{display:grid;grid-template-columns:1fr 1fr;column-gap:14px}.fl-r{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 0;border-top:1px solid var(--line);font-size:13px}.fl-r>span:first-child{flex:1}.fl-g{display:block;color:var(--muted);font-size:11px}.fl-v{text-align:right;font-weight:700;font-size:12.5px}.fl-n{margin:6px 0 0;font-size:12px;color:var(--muted)}';document.head.appendChild(st);})();
 var _vhPt=vHome;
 vHome=function(){
   var h=_vhPt(),k='<p class="dim">Sol üstteki üç çizgi';
