@@ -3212,7 +3212,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793304175;
+var BUILD_ID=1793304585;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -4246,6 +4246,7 @@ async function annOpen(){
   try{await annFetch();}catch(e){}
   if(ROLE==='coach'&&!STAFF){view='msg';render();return;}
   if(!annLive()){toast('Şu an aktif mesaj yok.');return;}
+  if(ROLE==='athlete'){meSec='survey';render();window.scrollTo(0,0);return;}
   var o=document.getElementById('annov');if(o)o.remove();
   o=document.createElement('div');o.id='annov';o.className='pcov';o.onclick=function(){o.remove();};
   o.innerHTML='<div style="width:100%;max-width:420px;max-height:88vh;overflow:auto" onclick="event.stopPropagation()">'+annCard()+'<button class="btn" style="width:100%" onclick="document.getElementById(\'annov\').remove()">Kapat</button></div>';
@@ -4256,6 +4257,16 @@ var _rdPs=render;
 render=function(){
   _rdPs();
   try{pushGate();}catch(e){}
+  try{
+    if(ROLE==='athlete'){
+      var ap=document.getElementById('app');
+      if(ap&&annLive()){
+        if(meSec==='survey'&&!ap.querySelector('#anncard'))ap.insertAdjacentHTML('afterbegin',annCard());
+        var ac=ap.querySelector('#anncard');
+        if(ac&&meSec==='home'){ac.style.cursor='pointer';ac.onclick=function(){mnGo('survey');};}
+      }
+    }
+  }catch(e){}
   try{
     if(ANNOPEN&&ROLE&&ROLE!=='none'&&(ROLE!=='athlete'||pushSt()!=='ask')){ANNOPEN=false;try{history.replaceState(null,'',location.pathname);}catch(e){}annOpen();}
   }catch(e){}
