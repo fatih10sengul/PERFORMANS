@@ -2842,6 +2842,96 @@ render=function(){
   if(ROLE==='coach'&&view==='pool'){document.getElementById('app').innerHTML=vPool();if(typeof setNav==='function')setNav();return;}
   _rdPl();
 };
+
+// ---- Mesaj: antrenörden herkese tek mesaj (yazı + fotoğraf), eski mesajlar saklanmaz
+SETK.push('msgTpl');
+var ANNTPL=['Günün anketini dolduralım','Antrenman saati değişti','Bugün antrenman yok','Antrenmana zamanında gelelim'];
+function annLive(){return !!(ANN&&(ANN.body||ANN.img)&&(!ANN.exp||new Date(ANN.exp).getTime()>Date.now()));}
+var ANN=null,annBusy=false,annInit=false,annNew=null,annDraft={t:'',img:''};
+function annSeenGet(){try{return localStorage.getItem('pp_ann_seen')||'';}catch(e){return '';}}
+function annSeenSet(m){try{localStorage.setItem('pp_ann_seen',m);}catch(e){}}
+function annDot(){try{var b=document.getElementById('mnbtn');if(b&&b.classList)b.classList.toggle('dot',!!(annLive()&&ANN.mid!==annSeenGet()));}catch(e){}}
+function annHour(t){try{return new Date(t).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});}catch(e){return '';}}
+function annTpls(){return ANNTPL.concat(Array.isArray(db.msgTpl)?db.msgTpl:[]);}
+function annTpl(i){var t=annTpls()[i];if(t!==undefined){annDraft.t=t;render();}}
+function annTplSave(){var t=(annDraft.t||'').trim();if(!t){toast('Önce mesajı yaz.');return;}if(annTpls().indexOf(t)>-1){toast('Bu hazır mesaj zaten var.');return;}db.msgTpl=(Array.isArray(db.msgTpl)?db.msgTpl:[]).concat([t]);save();render();toast('Hazır mesajlara eklendi');}
+function annTplDel(i){var k=i-ANNTPL.length;if(k<0||!Array.isArray(db.msgTpl))return;if(pendingDel!=='tpl'+i){pendingDel='tpl'+i;render();return;}db.msgTpl.splice(k,1);pendingDel=null;save();render();}
+function annDate(t){try{var d=new Date(t);return d.toLocaleDateString('tr-TR')+' '+d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});}catch(e){return '';}}
+function annCard(){
+  var isNew=ANN.mid!==annSeenGet();if(isNew)annNew=ANN.mid;annSeenSet(ANN.mid);
+  return '<div class="form" id="anncard" style="margin:0 0 14px"><div class="row" style="justify-content:space-between;align-items:center"><b>Antrenörden mesaj</b>'+(annNew===ANN.mid?'<span class="chip c-ok">Yeni</span>':'')+'</div><p class="dim" style="margin:2px 0 8px">'+esc(annDate(ANN.at))+'</p>'+(ANN.body?'<div style="white-space:pre-wrap;word-break:break-word">'+esc(ANN.body)+'</div>':'')+(ANN.img?'<img src="'+esc(ANN.img)+'" alt="Mesaj fotoğrafı" style="display:block;max-width:100%;border-radius:12px;margin-top:10px">':'')+'</div>';
+}
+async function annFetch(){
+  if(!SBC||!ROLE||ROLE==='none'||annBusy)return;annBusy=true;
+  try{
+    var r=await SBC.from('announcement').select('mid,body,img,updated_at,expires_at').eq('id',1).maybeSingle();
+    if(!r.error){
+      var n=r.data?{mid:r.data.mid,body:r.data.body||'',img:r.data.img||'',at:r.data.updated_at,exp:r.data.expires_at||''}:null;
+      var ch=(n&&n.mid)!==(ANN&&ANN.mid);ANN=n;annDot();
+      if(ch&&navHome()&&view!=='msg')render();
+    }
+  }catch(e){}
+  annBusy=false;
+}
+try{setInterval(function(){if(!document.hidden)annFetch();},60000);document.addEventListener('visibilitychange',function(){if(!document.hidden)annFetch();});}catch(e){}
+function vMsg(){
+  var h='<h1>Mesaj</h1><p class="sub">Yazdığın mesaj tüm sporcuların ve antrenörlerin ana ekranında görünür. Yeni mesaj gönderince eskisinin yerine geçer, eski mesajlara kimse ulaşamaz.</p>';
+  if(annLive()){
+    h+='<div class="form"><b>Şu an yayında</b><p class="dim" style="margin:2px 0 8px">'+esc(annDate(ANN.at))+(ANN.exp?' · '+esc(annHour(ANN.exp))+'\'e kadar':'')+'</p>'+(ANN.body?'<div style="white-space:pre-wrap;word-break:break-word">'+esc(ANN.body)+'</div>':'')+(ANN.img?'<img src="'+esc(ANN.img)+'" alt="" style="display:block;max-width:100%;border-radius:12px;margin-top:10px">':'')+'<div class="row" style="margin-top:12px"><button class="btn small danger" onclick="annClear()">'+(pendingDel==='annclr'?'Kaldırmayı onayla':'Mesajı kaldır')+'</button></div></div>';
+  }
+  var tp=annTpls();
+  h+='<div class="form"><b>Yeni mesaj</b><p class="dim" style="margin:2px 0 8px">Mesaj gönderildikten 4 saat sonra kendiliğinden kalkar.</p><label>Hazır mesajlar</label><div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">'+tp.map(function(t,i){return '<button class="btn small ghost" onclick="annTpl('+i+')">'+esc(t)+'</button>'+(i>=ANNTPL.length?'<button class="btn small danger" aria-label="Hazır mesajı sil" onclick="annTplDel('+i+')">'+(pendingDel==='tpl'+i?'Sil?':'×')+'</button>':'');}).join('')+'</div><label for="msg-t">Mesaj</label><textarea id="msg-t" rows="5" maxlength="1500" style="width:100%;font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;resize:vertical" oninput="annDraft.t=this.value">'+esc(annDraft.t)+'</textarea>'
+    +'<label for="msg-f">Fotoğraf (isteğe bağlı)</label><input id="msg-f" type="file" accept="image/*" onchange="annPick(this)">'
+    +(annDraft.img?'<img src="'+esc(annDraft.img)+'" alt="Seçilen fotoğraf" style="display:block;max-width:100%;border-radius:12px;margin-top:10px"><div class="row" style="margin-top:8px"><button class="btn small ghost" onclick="annDraft.img=\'\';render()">Fotoğrafı çıkar</button></div>':'')
+    +'<div class="row" style="margin-top:14px;gap:8px"><button class="btn" onclick="annSend()">'+(pendingDel==='annsend'?'Herkese göndermeyi onayla':'Herkese gönder')+'</button><button class="btn ghost" onclick="annTplSave()">Hazır mesaj olarak kaydet</button></div></div>';
+  return h;
+}
+function annPick(inp){
+  var f=inp.files&&inp.files[0];if(!f)return;
+  var rd=new FileReader();
+  rd.onload=function(){var im=new Image();im.onload=function(){
+    var k=Math.min(1,900/Math.max(im.width,im.height)),u='';
+    for(var i=0;i<6&&!u;i++){
+      var c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.width*k));c.height=Math.max(1,Math.round(im.height*k));c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+      var qs=[0.8,0.65,0.5,0.4];for(var j=0;j<qs.length;j++){var t=c.toDataURL('image/jpeg',qs[j]);if(t.length<=150000){u=t;break;}}
+      k*=0.8;
+    }
+    if(!u){toast('Fotoğraf çok büyük, başka bir fotoğraf dene.');return;}
+    annDraft.img=u;render();
+  };im.onerror=function(){toast('Fotoğraf okunamadı.');};im.src=rd.result;};
+  rd.readAsDataURL(f);
+}
+async function annSend(){
+  var d=annDraft;
+  if(!d.t.trim()&&!d.img){toast('Mesaj yaz veya fotoğraf ekle.');return;}
+  if(pendingDel!=='annsend'){pendingDel='annsend';render();return;}
+  pendingDel=null;
+  var row={id:1,mid:uid()+Date.now().toString(36),body:d.t.trim(),img:d.img||null,updated_at:new Date().toISOString(),expires_at:new Date(Date.now()+4*3600*1000).toISOString()};
+  var r=await SBC.from('announcement').upsert(row);
+  if(r.error){toast(/announcement|PGRST205|relation|schema cache/i.test((r.error.message||'')+(r.error.code||''))?'Mesaj için veritabanı güncellemesi gerekiyor.':'Gönderilemedi: '+(r.error.message||''));render();return;}
+  ANN={mid:row.mid,body:row.body,img:row.img||'',at:row.updated_at,exp:row.expires_at};annSeenSet(row.mid);annDraft={t:'',img:''};annDot();render();toast('Mesaj gönderildi');
+}
+async function annClear(){
+  if(pendingDel!=='annclr'){pendingDel='annclr';render();return;}
+  pendingDel=null;
+  var r=await SBC.from('announcement').delete().eq('id',1);
+  if(r.error){toast('Kaldırılamadı: '+(r.error.message||''));render();return;}
+  ANN=null;annDot();render();toast('Mesaj kaldırıldı');
+}
+var _rdMg=render;
+render=function(){
+  if(ROLE==='coach'&&view==='msg'){document.getElementById('app').innerHTML=vMsg();if(typeof setNav==='function')setNav();annDot();return;}
+  _rdMg();
+  try{
+    if(annLive()&&navHome()){
+      var app=document.getElementById('app'),hero=app&&app.querySelector&&app.querySelector('.hero');
+      if(hero&&!app.querySelector('#anncard'))hero.insertAdjacentHTML('afterend',annCard());
+    }
+  }catch(e){}
+  annDot();
+  if(!annInit&&ROLE&&ROLE!=='none'){annInit=true;annFetch();}
+};
+(function(){var st=document.createElement('style');st.textContent='#mnbtn{position:relative}#mnbtn.dot::after{content:"";position:absolute;top:3px;right:3px;width:11px;height:11px;border-radius:50%;background:var(--accent);border:2px solid var(--surface)}'+['annSend(','annClear(','annPick(','annTpl(','annTplSave(','annTplDel('].map(function(h){return 'body.ro [onclick*="'+h+'"],body.ro [onchange*="'+h+'"]';}).join(',')+'{display:none!important}';document.head.appendChild(st);})();
 (function(){var st=document.createElement('style');st.textContent=['poolSave(','poolDel(','poolAdd(','poolEdit('].map(function(h){return 'body.ro [onclick*="'+h+'"]';}).join(',')+'{display:none!important}';document.head.appendChild(st);})();
 
 // ---- Raporlarda test tarihleri
@@ -3116,7 +3206,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793136655;
+var BUILD_ID=1793274015;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3450,7 +3540,7 @@ chrome=function(){
   Object.keys(h).forEach(function(k){var b=document.getElementById('n-'+k);if(b)b.style.display=(STAFF&&!STP[h[k]])?'none':'';});
   var bs=document.getElementById('n-staff');if(bs)bs.style.display=STAFF?'none':'';
 };
-var VPERM={load:'load',gps:'gps',prog:'prog',inbox:'survey',team:'tests',matches:'matches',hiit:'prog',pool:'prog',invites:'x',entry:'x',prev:'x',staff:'x'};
+var VPERM={load:'load',gps:'gps',prog:'prog',inbox:'survey',team:'tests',matches:'matches',hiit:'prog',pool:'prog',msg:'x',invites:'x',entry:'x',prev:'x',staff:'x'};
 function stRpc(id,perms,on){return SBC.rpc('set_staff',{target:id,p:perms,enable:on});}
 async function loadStaff(){
   STLOAD=true;
@@ -3545,7 +3635,7 @@ function mnItems(){
     {t:'Sporcular',i:[['athletes','Sporcu listesi']]},
     {t:'Testler',i:[['testup','Veri yükle','!'],['team','Testler','tests']]},
     {t:'GPS',i:[['gpsup','Veri yükle','!'],['gpsday','GPS verileri','gps'],['load','ACWR','load'],['loadtarget','Günlük hedef','load'],['loadweek','Haftalık hedef','load'],['gpsssg','Küçük oyunlar (SSG)','gps']]},
-    {t:'Antrenman ve takip',i:[['inbox','Gelen (anket ve ağrı)','survey'],['prog','Antrenman programı','prog'],['pool','GYM','prog']]},
+    {t:'Antrenman ve takip',i:[['inbox','Gelen (anket ve ağrı)','survey'],['prog','Antrenman programı','prog'],['pool','GYM','prog'],['msg','Mesaj','x']]},
     {t:'Sistem',i:[['staff','Antrenörler','!'],['invites','Davet kodları','!']]},
     {t:'Maç verileri',i:[['matches','Maçlar','matches']]}
   ];
@@ -3959,6 +4049,31 @@ mnBuild=function(){
   }
 };
 
+
+// ---- Yumuşak sayfa geçişleri
+(function(){
+  var st=document.createElement('style');
+  st.textContent='#mndr{transition:transform .72s cubic-bezier(.2,.7,.2,1)!important}#mnov.on{animation:ppfade .65s ease both}@keyframes ppfade{from{opacity:0}to{opacity:1}}'
+   +'.btn,.hcard,.rank,.chip{transition:transform .12s ease,background-color .18s ease,border-color .18s ease,opacity .18s ease}.btn:active,.hcard:active{transform:scale(.97)}'
+   +'@media(prefers-reduced-motion:reduce){#mndr{transition:none!important}#mnov.on{animation:none}.btn,.hcard,.rank,.chip{transition:none}.btn:active,.hcard:active{transform:none}}';
+  document.head.appendChild(st);
+})();
+var _rdAn=render,_anKey='';
+function anKey(){try{return ROLE==='athlete'?('a:'+meSec):('c:'+view+':'+(selA||'')+':'+loadMode+':'+gpsMode);}catch(e){return '';}}
+render=function(){
+  var k=anKey(),chg=k!==_anKey&&_anKey!=='';_anKey=k;
+  var back=typeof NAVIN!=='undefined'&&NAVIN>0;
+  _rdAn.apply(this,arguments);
+  if(!chg)return;
+  try{
+    if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    var app=document.getElementById('app');if(!app||!app.children||!app.children[0]||!app.children[0].animate)return;
+    var kids=app.children,n=Math.min(kids.length,14),dx=back?-18:18;
+    for(var i=0;i<n;i++){
+      kids[i].animate([{opacity:0,transform:'translate('+dx+'px,6px)'},{opacity:1,transform:'none'}],{duration:1000,delay:Math.min(i*85,680),easing:'cubic-bezier(.2,.7,.2,1)',fill:'backwards'});
+    }
+  }catch(e){}
+};
 // ---- Uygulama olarak yükleme (PWA)
 var DEFERRED=null;
 function isStandalone(){return (window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true;}
