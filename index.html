@@ -3206,7 +3206,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793275489;
+var BUILD_ID=1793276172;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -4088,12 +4088,42 @@ function pTiles(){
   if(JERED&&!STAFF){
     h+='<div class="list">'+L.slice().sort(function(x,y){return pSur(x.a).localeCompare(pSur(y.a),'tr');}).map(function(x){return '<div class="rank"><div class="top"><span>'+esc(x.a.n)+'</span><input inputmode="numeric" aria-label="GPS numarası" style="width:72px;text-align:center" maxlength="2" value="'+esc(J[x.a.id]||'')+'" onchange="jerSet(\''+x.a.id+'\',this.value)"></div></div>';}).join('')+'</div>';
   }else{
-    h+='<div class="ptiles">'+L.map(function(x){var no=J[x.a.id];return '<button type="button" class="ptile" style="--st:'+PSTAT[x.s][1]+'" aria-label="'+esc(x.a.n)+', '+PSTAT[x.s][0]+'" onclick="go(\'profile\',\''+x.a.id+'\')"><b class="pt-no">'+esc(no||pIni(x.a))+'</b><span class="pt-nm">'+esc(pSur(x.a))+'</span></button>';}).join('')+'</div>';
+    h+='<div class="ptiles">'+L.map(function(x){var no=J[x.a.id];return '<button type="button" class="ptile" style="--st:'+PSTAT[x.s][1]+'" aria-label="'+esc(x.a.n)+', '+PSTAT[x.s][0]+'" onclick="pCard(\''+x.a.id+'\')"><b class="pt-no">'+esc(no||pIni(x.a))+'</b><span class="pt-nm">'+esc(pSur(x.a))+'</span></button>';}).join('')+'</div>';
     h+='<p class="dim" style="margin:10px 0 0;font-size:12px">Müdahale: yüksek şiddetli ağrı, ya da yüksek yük ve ağrı birlikte. İzle: tek sinyal (son 3 günde ağrı bildirimi veya ACWR 1,5 üstü). Sakat: aktif sakatlık.</p>';
   }
   return h+'</div>';
 }
 (function(){var st=document.createElement('style');st.textContent='.ptiles{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}@media(min-width:700px){.ptiles{grid-template-columns:repeat(10,1fr)}}.ptile{position:relative;overflow:hidden;border:1px solid var(--line);background:linear-gradient(180deg,var(--surface),var(--bg));color:var(--ink);border-radius:9px;padding:7px 2px 6px;text-align:center;font:inherit;min-height:58px;cursor:pointer}.ptile::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--st)}.hsm{grid-template-columns:repeat(3,1fr)!important}.hsm .pt-no{font-size:20px}.hsm .pt-nm{font-size:9px}.pt-no{display:block;font-size:22px;font-weight:800;line-height:1.1;letter-spacing:-.02em}.pt-nm{display:block;font-size:8px;letter-spacing:.03em;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 2px}.pst{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 11px;font-size:13px}.pst i{width:10px;height:10px;border-radius:50%;background:var(--st);display:inline-block}';st.textContent+=['jerSet('].map(function(h){return 'body.ro [onclick*="'+h+'"],body.ro [onchange*="'+h+'"]';}).join(',')+'{display:none!important}';document.head.appendChild(st);})();
+
+// ---- Oyuncu forma kartı
+function pCard(id){
+  var a=db.athletes.filter(function(x){return x.id===id;})[0];if(!a)return;
+  var st=pStat(a),S=PSTAT[st],no=(db.jersey||{})[id]||'',td=today(),lim=dnum(td)-2;
+  var e=null,tr='→',trT='Sabit';try{e=ewma(id,'td');var sr=ewmaSeries(id,'td');
+    if(sr.length>4&&sr[sr.length-1].r!=null&&sr[sr.length-5].r!=null){var df=sr[sr.length-1].r-sr[sr.length-5].r;if(df>0.05){tr='↗';trT='Artıyor';}else if(df<-0.05){tr='↘';trT='Azalıyor';}}}catch(er){}
+  var rv=(e&&e.r!=null&&e.n>=28)?e.r:null;
+  var pains=[];SV().forEach(function(x){if(x.a!==id||dnum(x.d)<lim)return;(x.pain||[]).forEach(function(p){pains.push(p);});});
+  var mx=0;pains.forEach(function(p){if(p.v>mx)mx=p.v;});
+  var why=[];
+  if(isInj(a))why.push('Aktif sakatlık'+(a.inj&&a.inj.type?': '+a.inj.type:''));
+  if(mx>=7)why.push('Yüksek şiddetli ağrı bildirimi ('+mx+'/10)');else if(pains.length)why.push('Son 3 günde ağrı bildirimi ('+mx+'/10)');
+  if(rv!=null&&rv>1.5)why.push('Yük oranı yüksek (ACWR '+rv.toFixed(2).replace('.',',')+')');
+  if(!why.length)why.push(rv==null?'Yük verisi henüz yetersiz':'Sinyal yok, hazır');
+  var ld=e&&e.last?trDate(e.last):'-';
+  var h='<div class="pcov" onclick="pCardX()"><div class="pcard" style="--st:'+S[1]+'" onclick="event.stopPropagation()">'
+   +'<div class="pc-top"><span>'+esc(a.p||'')+'</span><span class="pst" style="--st:'+S[1]+'"><i></i>'+S[0]+'</span></div>'
+   +'<div class="pc-big">'+esc(no||pIni(a))+'</div>'
+   +'<div class="pc-nm">'+esc(a.n)+'</div>'
+   +'<div class="pc-g"><div><small>ACWR</small><b style="color:'+(rv==null?'inherit':rv>1.5?'#e5484d':rv>1.3?'#f5a524':'#30a46c')+'">'+(rv==null?'-':rv.toFixed(2).replace('.',','))+'</b></div>'
+   +'<div><small>TREND</small><b>'+tr+'</b><em>'+trT+'</em></div>'
+   +'<div><small>AĞRI</small><b>'+(pains.length?mx+'/10':'0')+'</b><em>son 3 gün</em></div></div>'
+   +'<ul class="pc-w">'+why.map(function(w){return '<li>'+esc(w)+'</li>';}).join('')+'</ul>'
+   +'<div class="pc-f"><span>Son GPS: '+ld+'</span><span><button class="btn small ghost" onclick="pCardX();go(\'profile\',\''+id+'\')">Tüm profil</button> <button class="btn small ghost" onclick="pCardX()">Kapat</button></span></div>'
+   +'</div></div>';
+  var d=document.createElement('div');d.id='pcw';d.innerHTML=h;document.body.appendChild(d);
+}
+function pCardX(){var d=document.getElementById('pcw');if(d)d.remove();}
+(function(){var st=document.createElement('style');st.textContent='.pcov{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;padding:16px;animation:ppfade .3s ease both}.pcard{position:relative;overflow:hidden;width:100%;max-width:380px;background:linear-gradient(180deg,var(--surface),var(--bg));border:1px solid var(--line);border-radius:16px;padding:16px 16px 12px;color:var(--ink)}.pcard::before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--st)}.pc-top{display:flex;justify-content:space-between;align-items:center;font-size:12px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}.pc-big{position:absolute;right:10px;top:34px;font-size:110px;font-weight:800;line-height:1;color:transparent;-webkit-text-stroke:2px var(--st);opacity:.35;pointer-events:none}.pc-nm{font-size:26px;font-weight:800;margin:26px 0 14px;letter-spacing:.01em;position:relative}.pc-g{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;position:relative}.pc-g>div{border:1px solid var(--line);border-radius:10px;padding:8px 6px;text-align:center;background:rgba(0,0,0,.18)}.pc-g small{display:block;font-size:10px;letter-spacing:.1em;color:var(--muted)}.pc-g b{display:block;font-size:22px;margin-top:2px}.pc-g em{display:block;font-style:normal;font-size:10px;color:var(--muted)}.pc-w{margin:12px 0 8px;padding-left:18px;font-size:14px;position:relative}.pc-f{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-top:6px;position:relative}';document.head.appendChild(st);})();
 var _vhPt=vHome;
 vHome=function(){
   var h=_vhPt(),k='<p class="dim">Sol üstteki üç çizgi';
