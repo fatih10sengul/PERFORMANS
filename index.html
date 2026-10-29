@@ -2840,6 +2840,7 @@ function poolDel(id){if(pendingDel!=='pl'+id){pendingDel='pl'+id;render();return
 var _rdPl=render;
 render=function(){
   if(ROLE==='coach'&&view==='pool'){document.getElementById('app').innerHTML=vPool();if(typeof setNav==='function')setNav();return;}
+  if(ROLE==='coach'&&view==='rep'){document.getElementById('app').innerHTML=vRep();if(typeof setNav==='function')setNav();return;}
   _rdPl();
 };
 
@@ -3206,7 +3207,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793276172;
+var BUILD_ID=1793276906;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3540,7 +3541,7 @@ chrome=function(){
   Object.keys(h).forEach(function(k){var b=document.getElementById('n-'+k);if(b)b.style.display=(STAFF&&!STP[h[k]])?'none':'';});
   var bs=document.getElementById('n-staff');if(bs)bs.style.display=STAFF?'none':'';
 };
-var VPERM={load:'load',gps:'gps',prog:'prog',inbox:'survey',team:'tests',matches:'matches',hiit:'prog',pool:'prog',msg:'x',invites:'x',entry:'x',prev:'x',staff:'x'};
+var VPERM={load:'load',gps:'gps',prog:'prog',inbox:'survey',team:'tests',matches:'matches',hiit:'prog',pool:'prog',rep:'load',msg:'x',invites:'x',entry:'x',prev:'x',staff:'x'};
 function stRpc(id,perms,on){return SBC.rpc('set_staff',{target:id,p:perms,enable:on});}
 async function loadStaff(){
   STLOAD=true;
@@ -3634,7 +3635,7 @@ function mnItems(){
     {t:'',i:[['home','Ana sayfa']]},
     {t:'Sporcular',i:[['athletes','Sporcu listesi']]},
     {t:'Testler',i:[['testup','Veri yükle','!'],['team','Testler','tests']]},
-    {t:'GPS',i:[['gpsup','Veri yükle','!'],['gpsday','GPS verileri','gps'],['load','ACWR','load'],['loadtarget','Günlük hedef','load'],['loadweek','Haftalık hedef','load'],['gpsssg','Küçük oyunlar (SSG)','gps']]},
+    {t:'GPS',i:[['rep','Günlük rapor','load'],['gpsup','Veri yükle','!'],['gpsday','GPS verileri','gps'],['load','ACWR','load'],['loadtarget','Günlük hedef','load'],['loadweek','Haftalık hedef','load'],['gpsssg','Küçük oyunlar (SSG)','gps']]},
     {t:'Antrenman ve takip',i:[['inbox','Gelen (anket ve ağrı)','survey'],['prog','Antrenman programı','prog'],['pool','GYM','prog'],['msg','Mesaj','x']]},
     {t:'Sistem',i:[['staff','Antrenörler','!'],['invites','Davet kodları','!']]},
     {t:'Maç verileri',i:[['matches','Maçlar','matches']]}
@@ -4124,6 +4125,40 @@ function pCard(id){
 }
 function pCardX(){var d=document.getElementById('pcw');if(d)d.remove();}
 (function(){var st=document.createElement('style');st.textContent='.pcov{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;padding:16px;animation:ppfade .3s ease both}.pcard{position:relative;overflow:hidden;width:100%;max-width:380px;background:linear-gradient(180deg,var(--surface),var(--bg));border:1px solid var(--line);border-radius:16px;padding:16px 16px 12px;color:var(--ink)}.pcard::before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--st)}.pc-top{display:flex;justify-content:space-between;align-items:center;font-size:12px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}.pc-big{position:absolute;right:10px;top:34px;font-size:110px;font-weight:800;line-height:1;color:transparent;-webkit-text-stroke:2px var(--st);opacity:.35;pointer-events:none}.pc-nm{font-size:26px;font-weight:800;margin:26px 0 14px;letter-spacing:.01em;position:relative}.pc-g{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;position:relative}.pc-g>div{border:1px solid var(--line);border-radius:10px;padding:8px 6px;text-align:center;background:rgba(0,0,0,.18)}.pc-g small{display:block;font-size:10px;letter-spacing:.1em;color:var(--muted)}.pc-g b{display:block;font-size:22px;margin-top:2px}.pc-g em{display:block;font-style:normal;font-size:10px;color:var(--muted)}.pc-w{margin:12px 0 8px;padding-left:18px;font-size:14px;position:relative}.pc-f{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-top:6px;position:relative}';document.head.appendChild(st);})();
+
+// ---- Günlük takım raporu
+var TRDAY=['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+function pFind(a){
+  var td=today(),lim=dnum(td)-2,e=null,rv=null,pains=[],mx=0,f=[];
+  try{e=ewma(a.id,'td');}catch(er){}
+  if(e&&e.r!=null&&e.n>=28)rv=e.r;
+  SV().forEach(function(x){if(x.a!==a.id||dnum(x.d)<lim)return;(x.pain||[]).forEach(function(p){pains.push(p);if(p.v>mx)mx=p.v;});});
+  if(isInj(a))f.push('Aktif sakatlık'+(a.inj&&a.inj.type?': '+a.inj.type:''));
+  if(pains.length){var ks=[];pains.forEach(function(p){if(p.k){var lb=regLabel(p.k);if(ks.indexOf(lb)<0)ks.push(lb);}});f.push('Ağrı bildirimi '+mx+'/10'+(ks.length?' ('+ks.slice(0,2).join(', ')+')':''));}
+  if(rv!=null&&rv>1.5)f.push('Yük oranı yüksek (ACWR '+rv.toFixed(2).replace('.',',')+') → bu hafta yükü gözden geçir');
+  else if(rv!=null&&rv<0.8)f.push('Eksik yük (ACWR '+rv.toFixed(2).replace('.',',')+') → yük hedefini artır');
+  var seen=false;SV().forEach(function(x){if(x.a===a.id&&x.d===td)seen=true;});
+  if(!seen)f.push('Bugün anket doldurmadı');
+  return {f:f,e:e,rv:rv};
+}
+function vRep(){
+  var act=db.athletes.filter(function(a){return !a.arch;}),td=today(),J=db.jersey||{},L=act.map(function(a){return {a:a,s:pStat(a),r:pFind(a)};});
+  var cnt={m:0,i:0,s:0,h:0},full=0;L.forEach(function(x){cnt[x.s]++;if(x.r.e&&x.r.e.n>=28)full++;});
+  var dt=new Date(td+'T00:00:00Z');
+  var h='<h1>Günlük takım raporu</h1><p class="sub">'+TRDAY[dt.getUTCDay()]+' '+trDate(td)+'</p>';
+  h+='<div class="ptiles hsm rep4">'+[['m','Müdahale',cnt.m],['i','İzle',cnt.i],['h','Hazır',cnt.h],['s','Sakat',cnt.s]].map(function(c){return '<div class="ptile" style="--st:'+PSTAT[c[0]][1]+';cursor:default"><span class="pt-no">'+c[2]+'</span><span class="pt-nm">'+c[1].toUpperCase()+'</span></div>';}).join('')+'</div>';
+  h+='<p class="dim" style="margin:6px 0 0">Veri güveni: '+full+'/'+act.length+' oyuncuda 28+ günlük GPS verisi var.</p>';
+  var pri=L.filter(function(x){return x.s!=='h';}).sort(function(x,y){return PSTAT[x.s][2]-PSTAT[y.s][2]||pSur(x.a).localeCompare(pSur(y.a),'tr');});
+  h+='<div class="grp" style="margin-top:16px"><h2 style="margin:0 0 8px">Öncelikli oyuncular</h2>';
+  if(!pri.length)h+='<p class="dim">Bugün öncelikli oyuncu yok.</p>';
+  h+=pri.map(function(x){return '<button type="button" class="rrow" style="--st:'+PSTAT[x.s][1]+'" onclick="pCard(\''+x.a.id+'\')"><span class="rr-no">'+esc(J[x.a.id]||pIni(x.a))+'</span><span class="rr-b"><b>'+esc(x.a.n)+'</b><i class="rr-s">'+PSTAT[x.s][0]+'</i>'+(x.r.f.length?'<span class="rr-f">'+x.r.f.map(esc).join('<br>')+'</span>':'')+'</span></button>';}).join('');
+  var hz=L.filter(function(x){return x.s==='h';}).sort(function(x,y){return pSur(x.a).localeCompare(pSur(y.a),'tr');});
+  h+='</div><div class="grp" style="margin-top:16px"><h2 style="margin:0 0 8px">Hazır · '+hz.length+'</h2><p class="dim" style="margin:0 0 8px">'+hz.map(function(x){return esc(x.a.n);}).join(' · ')+'</p>';
+  var miss=hz.filter(function(x){return x.r.f.some(function(t){return t.indexOf('anket')>-1;});});
+  if(miss.length)h+='<p class="dim" style="margin:0">Bugün anket doldurmayan: '+miss.map(function(x){return esc(pSur(x.a));}).join(', ')+'</p>';
+  return h+'</div>';
+}
+(function(){var st=document.createElement('style');st.textContent='.rep4{grid-template-columns:repeat(4,1fr)!important;margin-top:12px}.rrow{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;font:inherit;color:var(--ink);background:linear-gradient(180deg,var(--surface),var(--bg));border:1px solid var(--line);border-left:4px solid var(--st);border-radius:10px;padding:10px 12px;margin-bottom:8px}.rr-no{font-size:22px;font-weight:800;min-width:34px;text-align:center}.rr-b{flex:1;font-size:14px}.rr-s{font-style:normal;float:right;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--st);font-weight:700}.rr-f{display:block;margin-top:4px;font-size:12.5px;color:var(--muted);line-height:1.45}';document.head.appendChild(st);})();
 var _vhPt=vHome;
 vHome=function(){
   var h=_vhPt(),k='<p class="dim">Sol üstteki üç çizgi';
