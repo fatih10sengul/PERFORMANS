@@ -2785,6 +2785,12 @@ function poolVidAdd(){
   poolList().forEach(function(e){if(!e.url&&POOLVID[e.n])e.url=POOLVID[e.n];});
   db.poolSeed=d.concat(['v2']);return true;
 }
+function poolAdd3(){
+  var d=db.poolSeed||[];if(d.indexOf('v3')>-1)return false;
+  var L=poolList(),n='Tek Bacak RDL + Sehpaya Step-Up (bar)',k=n.toLowerCase();
+  if(!L.some(function(e){return (e.n||'').toLowerCase()===k;}))L.push({id:uid(),n:n,t:'Kuvvet',s:'Kalça baskın',m:'Hamstring',sets:'',reps:'',url:'https://youtu.be/LlP4tyeqXis',note:''});
+  db.poolSeed=d.concat(['v3']);return true;
+}
 function poolVid(e){
   if(!e.url)return '<span class="dim">Video yok</span>';
   return e.url.split('|').map(function(u,i,a){return '<a class="chip c-ok" href="'+esc(u.trim())+'" target="_blank" rel="noopener noreferrer">Video'+(a.length>1?' '+(i+1):'')+'</a>';}).join(' ');
@@ -2812,7 +2818,7 @@ function poolSelS(t,s){
 }
 function poolTChg(t){var w=document.getElementById('pl-sw');if(w)w.innerHTML=poolSelS(t,'');}
 function vPool(){
-  if(!STAFF){var _c1=poolSetup(),_c2=poolSeedAdd(),_c3=poolVidAdd();if(_c1||_c2||_c3)save();}
+  if(!STAFF){var _c1=poolSetup(),_c2=poolSeedAdd(),_c3=poolVidAdd(),_c4=poolAdd3();if(_c1||_c2||_c3||_c4)save();}
   var all=poolList(),h='<h1>GYM</h1><p class="sub">Tüm hareketlerin burada durur. Günlere buradan atanır. Sporcu burayı görmez, yalnızca senin atadıklarını görür.</p>';
   poolTypes().forEach(function(T){
     var L=all.filter(function(e){return (e.t||'Türsüz')===T;}),open=poolOpen===T;
@@ -3236,7 +3242,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793349097;
+var BUILD_ID=1793355018;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
