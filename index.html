@@ -2707,7 +2707,31 @@ function hiitCsv(){
   dlFile('hiit-mesafe-'+hiitShow()+'.csv','Sporcu;Grup;MSS;MAS;MAS tarihi;ASR;Hedef hız (km/sa);Mesafe (m);Koni (m);Tekrar/set;Toplam (m);10 sn;15 sn;20 sn\r\n'+L.map(function(x){return [x.a.n,HGN(x.g),x.mss,x.mas,x.md,x.asr,x.tv,x.dist,x.cone,x.reps,x.tot,x.d10,x.d15,x.d20].map(function(v){return v==null?'':typeof v==='number'?String(Math.round(v*100)/100).replace('.',','):v}).join(';')}).join('\r\n')+'\r\n');
 }
 var _vprH=vProg;
-vProg=function(){return '<div class="row" style="margin-bottom:8px"><button class="btn ghost" onclick="go(\'hiit\')">HIIT mesafe hesaplama</button></div>'+_vprH();};
+function pkPanel(){
+  var L=poolList();if(!L.length)return '';
+  var by={};L.forEach(function(e){var t=e.t||'Türsüz';(by[t]=by[t]||[]).push(e);});
+  var ts=poolTypes().filter(function(t){return by[t];});
+  var h='<details class="pk-pn" style="margin:14px 0"><summary class="btn ghost" style="display:block;text-align:center;cursor:pointer">Havuzdan seç (GYM)</summary><div style="margin-top:8px">';
+  h+=ts.map(function(t){
+    var l=by[t].slice().sort(function(a,b){return (a.s||'').localeCompare(b.s||'','tr')||a.n.localeCompare(b.n,'tr');});
+    return '<details class="pk-t"><summary>'+esc(t)+' <span class="dim">('+l.length+')</span></summary>'+l.map(function(e){return '<button type="button" class="pk-i" onclick="pkUse(\''+e.id+'\')"><span>'+esc(e.n)+'</span><small>'+esc([e.s,e.m].filter(Boolean).join(' · '))+(e.url?' · video':'')+'</small></button>';}).join('')+'</details>';
+  }).join('');
+  return h+'</div></details>';
+}
+function pkUse(id){
+  var e=poolList().filter(function(x){return x.id===id;})[0];if(!e)return;
+  var n=document.getElementById('ex-n'),u=document.getElementById('ex-u');
+  if(n)n.value=e.n;if(u)u.value=e.url||'';
+  var pn=document.querySelector('.pk-pn');if(pn)pn.removeAttribute('open');
+  if(n&&n.scrollIntoView)n.scrollIntoView({block:'center'});
+  toast('Seçildi: '+e.n+'. Set, tekrar ve kime bilgisini yazıp ekle.');
+}
+(function(){var st=document.createElement('style');st.textContent='.pk-t{border:1px solid var(--line);border-radius:10px;margin:6px 0;padding:2px 10px;background:var(--surface)}.pk-t>summary{padding:10px 0;cursor:pointer;font-weight:700}.pk-i{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;font:inherit;color:var(--ink);background:none;border:0;border-top:1px solid var(--line);padding:9px 0}.pk-i small{color:var(--muted);font-size:11px;text-align:right}body.ro .pk-pn{display:none!important}';document.head.appendChild(st);})();
+vProg=function(){
+  var h=_vprH(),k='<div class="form"><b>Egzersiz ekle</b>',i=h.indexOf(k);
+  if(i>-1&&!STAFF)h=h.slice(0,i)+pkPanel()+h.slice(i);
+  return '<div class="row" style="margin-bottom:8px"><button class="btn ghost" onclick="go(\'hiit\')">HIIT mesafe hesaplama</button></div>'+h;
+};
 var _rdH=render;
 render=function(){
   if(ROLE==='coach'&&view==='hiit'){document.getElementById('app').innerHTML=vHiit();if(typeof setNav==='function')setNav();return;}
@@ -3212,7 +3236,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793304585;
+var BUILD_ID=1793349097;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
