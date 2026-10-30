@@ -2010,7 +2010,7 @@ async function boot(){
       showClaim();return;
     }
     await loadAll();
-    if(ROLE==='coach'&&!STAFF){var _c1=collapseBody(),_c2=seedMatches(),_c3=seedProgram(),_c4=migHop(),_c5=seedHop(),_c6=seedJump(),_c7=seedJump2(),_c8=seedJump3(),_c9=undoMas();if(_c1||_c2||_c3||_c4||_c5||_c6||_c7||_c8||_c9)save();}
+    if(ROLE==='coach'&&!STAFF){var _c1=collapseBody(),_c2=seedMatches(),_c3=seedProgram(),_c4=migHop(),_c5=seedHop(),_c6=seedJump(),_c7=seedJump2(),_c8=seedJump3(),_c9=undoMas(),_c10=migGps();if(_c1||_c2||_c3||_c4||_c5||_c6||_c7||_c8||_c9||_c10)save();}
     if(ROLE==='athlete'){ME=db.athletes[0]?db.athletes[0].id:null;selA=ME;}
     authHide();chrome();
     view=ROLE==='athlete'?'me':'home';
@@ -3242,7 +3242,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793355018;
+var BUILD_ID=1793378679;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -4313,6 +4313,19 @@ render=function(){
   }catch(e){}
 };
 (function(){var st=document.createElement('style');st.textContent='#pushgate{position:fixed;inset:0;z-index:90;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto}.pg-b{width:100%;max-width:380px}.pg-t{font-size:12px;letter-spacing:.2em;font-weight:700;color:#e0b04a;margin-bottom:10px}.pg-b h2{font-size:28px;margin:0 0 12px}.pg-b p{color:var(--muted);line-height:1.5}.pg-b ol{padding-left:20px;line-height:1.7;margin:10px 0 16px}.pg-b .btn{width:100%;margin-top:10px}.pushcard{display:flex;flex-direction:column;gap:6px;align-items:flex-start;margin:8px 0;padding:12px 14px;border:1px solid var(--line);border-left:4px solid #e0b04a;border-radius:10px;background:linear-gradient(180deg,var(--surface),var(--bg));font-size:14px}.pushcard span{color:var(--muted);font-size:13px}';document.head.appendChild(st);})();
+
+// ---- GPS günleri herkese açık, ACWR sporcu ekranından kalktı (ACWR yalnızca antrenör ve hoca ekranlarında)
+SETK.push('permGps');
+PDEF.gps=true;PDEF.load=false;
+function migGps(){
+  if(db.permGps)return false;
+  var P=PM();
+  db.athletes.forEach(function(a){P[a.id]=Object.assign({},PDEF,P[a.id]||{},{gps:true,load:false});});
+  db.permGps=1;return true;
+}
+var _permX=perm;
+perm=function(a){var p=_permX(a);p.load=false;return p;};
+CAT=CAT.filter(function(c){return c[0]!=='load';});
 var _vhPt=vHome;
 vHome=function(){
   var h=_vhPt(),k='<p class="dim">Sol üstteki üç çizgi';
