@@ -2870,6 +2870,7 @@ function poolDel(id){if(pendingDel!=='pl'+id){pendingDel='pl'+id;render();return
 var _rdPl=render;
 render=function(){
   if(ROLE==='coach'&&view==='pool'){document.getElementById('app').innerHTML=vPool();if(typeof setNav==='function')setNav();return;}
+  if(ROLE==='coach'&&view==='rpt'){document.getElementById('app').innerHTML=vRpt();if(typeof setNav==='function')setNav();return;}
   if(ROLE==='coach'&&view==='flow'){document.getElementById('app').innerHTML=vFlow();if(typeof setNav==='function')setNav();return;}
   if(ROLE==='coach'&&view==='rep'){document.getElementById('app').innerHTML=vRep();if(typeof setNav==='function')setNav();return;}
   _rdPl();
@@ -3242,7 +3243,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793455922;
+var BUILD_ID=1793457067;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3576,7 +3577,7 @@ chrome=function(){
   Object.keys(h).forEach(function(k){var b=document.getElementById('n-'+k);if(b)b.style.display=(STAFF&&!STP[h[k]])?'none':'';});
   var bs=document.getElementById('n-staff');if(bs)bs.style.display=STAFF?'none':'';
 };
-var VPERM={load:'load',gps:'gps',prog:'prog',inbox:'survey',team:'tests',matches:'matches',hiit:'prog',pool:'prog',rep:'load',flow:'load',msg:'x',invites:'x',entry:'x',prev:'x',staff:'x'};
+var VPERM={load:'load',gps:'gps',prog:'prog',inbox:'survey',team:'tests',matches:'matches',hiit:'prog',pool:'prog',rep:'load',flow:'load',rpt:'load',tgt:'load',msg:'x',invites:'x',entry:'x',prev:'x',staff:'x'};
 function stRpc(id,perms,on){return SBC.rpc('set_staff',{target:id,p:perms,enable:on});}
 async function loadStaff(){
   STLOAD=true;
@@ -3670,9 +3671,9 @@ function mnItems(){
     {t:'',i:[['home','Ana sayfa']]},
     {t:'Sporcular',i:[['athletes','Sporcu listesi']]},
     {t:'Testler',i:[['testup','Veri yükle','!'],['team','Testler','tests']]},
-    {t:'GPS',i:[['rep','Günlük rapor','load'],['flow','Haftanın akışı','load'],['gpsup','Veri yükle','!'],['gpsday','GPS verileri','gps'],['load','ACWR','load'],['loadtarget','Günlük hedef','load'],['loadweek','Haftalık hedef','load'],['gpsssg','Küçük oyunlar (SSG)','gps']]},
+    {t:'GPS',i:[['gpsup','Veri yükle','!'],['rpt','Rapor','load'],['gpsday','GPS verileri','gps'],['load','ACWR','load'],['tgt','Hedefler','load']]},
     {t:'Antrenman ve takip',i:[['inbox','Gelen (anket ve ağrı)','survey'],['prog','Antrenman programı','prog'],['pool','GYM','prog'],['msg','Mesaj','x']]},
-    {t:'Sistem',i:[['staff','Antrenörler','!'],['invites','Davet kodları','!']]},
+    {t:'Sistem',i:[['staff','Antrenörler','!'],['invites','Davet kodları','!'],['gpsssg','Küçük oyunlar (SSG)','gps']]},
     {t:'Maç verileri',i:[['matches','Maçlar','matches']]}
   ];
 }
@@ -3683,7 +3684,8 @@ function mnCur(){
   if(view==='profile'||view==='prev')return 'athletes';
   if(view==='entry')return 'testup';
   if(view==='hiit')return 'prog';
-  if(view==='load')return loadMode==='target'?'loadtarget':loadMode==='week'?'loadweek':'load';
+  if(view==='load')return loadMode==='target'||loadMode==='week'?'tgt':'load';
+  if(view==='rep'||view==='flow')return 'rpt';
   if(view==='gps')return gpsMode==='ssg'?'gpsssg':'gpsday';
   return view;
 }
@@ -3749,6 +3751,8 @@ function mnGo(k){
   mnClose(false);mnExp={};
   if(ROLE==='athlete'){meSec=k;render();window.scrollTo(0,0);return;}
   if(k==='load'||k==='loadtarget'||k==='loadweek'){loadMode=k==='loadtarget'?'target':k==='loadweek'?'week':'acwr';go('load');return;}
+  if(k==='tgt'){loadMode=TGTAB==='h'?'week':'target';go('load');return;}
+  if(k==='rptw'){RPTAB='w';go('rpt');return;}
   if(k==='gpsday'){gpsMode='day';go('gps');return;}
   if(k==='gpsssg'){gpsMode='ssg';go('gps');return;}
   if(k==='backup'){backupJson();return;}
@@ -3764,7 +3768,7 @@ function vHome(){
     cs.push(['inbox',Object.keys(seen).length+'/'+db.athletes.length,'ANKET']);
     cs.push(['inbox',unseenN(),'AĞRI BİLDİRİMİ']);
   }
-  if(mnCan('load')){cs.push(['flow',MDT[wd(today())]||'-','BUGÜN']);}
+  if(mnCan('load')){cs.push(['rptw',MDT[wd(today())]||'-','BUGÜN']);}
   h+='<div class="ptiles hsm">'+cs.map(function(c){return '<button type="button" class="ptile" style="--st:var(--line)" onclick="mnGo(\''+c[0]+'\')"><span class="pt-no">'+esc(String(c[1]))+'</span><span class="pt-nm">'+esc(c[2])+'</span></button>';}).join('')+'</div>';
   h+='<p class="dim">Sol üstteki üç çizgi düğmesinden tüm bölümlere ulaşabilirsin.</p>';
   return h;
@@ -3894,6 +3898,7 @@ vLoad=function(){
   var h=_vlYk();
   h=h.replace(/<div class="row" style="margin:0 0 10px">(?:<button class="btn small[^"]*" onclick="loadMode=[^>]*>[^<]*<\/button>)+<\/div>/,'');
   h=h.replace(/<div class="row"><button class="btn" onclick="showImp=!showImp;render\(\)">[^<]*<\/button><\/div>/,'');
+  if(loadMode==='target'||loadMode==='week'){TGTAB=loadMode==='week'?'h':'g';h='<div class="row" style="gap:6px;margin:4px 0 12px"><button class="btn small'+(loadMode==='target'?'':' ghost')+'" onclick="loadMode=\'target\';render()">Günlük hedef</button><button class="btn small'+(loadMode==='week'?'':' ghost')+'" onclick="loadMode=\'week\';render()">Haftalık hedef</button></div>'+h;}
   if(loadMode==='target')h=h.replace('<h1>Yük ve risk</h1>','<h1>Günlük hedef</h1>');
   if(loadMode==='week')h=h.replace('<h1>Yük ve risk</h1>','<h1>Haftalık hedef</h1>');
   h=h.replace('Henüz GPS verisi yok. CSV dosyası aktar ya da örnek veriyle dene.','Henüz GPS verisi yok. GPS menüsündeki Veri yükle sayfasından günlük dosyayı yükle.');
@@ -4326,6 +4331,20 @@ function migGps(){
 var _permX=perm;
 perm=function(a){var p=_permX(a);p.load=false;return p;};
 CAT=CAT.filter(function(c){return c[0]!=='load';});
+
+// ---- Rapor: Günlük ve Haftalık sekmeleri, PDF
+var RPTAB='d',TGTAB='g';
+function vRpt(){
+  var b=RPTAB==='w'?vFlow():vRep();
+  b=b.replace('<h1>','<h2 style="margin:12px 0 0">').replace('</h1>','</h2>');
+  return '<h1 class="rpt-h">Rapor</h1><div class="row rpt-tabs" style="gap:6px;margin:6px 0 4px;align-items:center"><button class="btn small'+(RPTAB==='d'?'':' ghost')+'" onclick="RPTAB=\'d\';render()">Günlük</button><button class="btn small'+(RPTAB==='w'?'':' ghost')+'" onclick="RPTAB=\'w\';render()">Haftalık</button><span style="flex:1"></span><button class="btn small ghost" onclick="rptPdf()">PDF indir</button></div>'+b;
+}
+function rptPdf(){
+  var t=document.title;document.title='Fethiyespor U19 '+(RPTAB==='w'?'Haftalık':'Günlük')+' Rapor '+trDate(today());
+  try{window.print();}catch(e){toast('Yazdırma açılamadı. Bilgisayardan dene.');}
+  setTimeout(function(){document.title=t;},1500);
+}
+(function(){var st=document.createElement('style');st.textContent='@media print{#mnbar,#mnov,#mndr,#bkbtn,#pushgate,.pcov,.rpt-tabs,.btn,button.btn,#toast,.toast{display:none!important}html,body{background:#fff!important;color:#000!important}body::before,html::after,body::after{display:none!important}body *{color:#000!important;text-shadow:none!important;box-shadow:none!important}.ptile,.rrow,.fl-c,.pcard{background:#fff!important;border:1px solid #888!important;break-inside:avoid}.fl-w{grid-template-columns:repeat(3,1fr)!important}.ptile{--st:#888}.fl-c.fut{opacity:1}.rpt-h{font-size:18px}#app{padding:0!important}}';document.head.appendChild(st);})();
 var _vhPt=vHome;
 vHome=function(){
   var h=_vhPt(),k='<p class="dim">Sol üstteki üç çizgi';
