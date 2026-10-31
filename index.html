@@ -2010,7 +2010,7 @@ async function boot(){
       showClaim();return;
     }
     await loadAll();
-    if(ROLE==='coach'&&!STAFF){var _c1=collapseBody(),_c2=seedMatches(),_c3=seedProgram(),_c4=migHop(),_c5=seedHop(),_c6=seedJump(),_c7=seedJump2(),_c8=seedJump3(),_c9=undoMas(),_c10=migGps();if(_c1||_c2||_c3||_c4||_c5||_c6||_c7||_c8||_c9||_c10)save();}
+    if(ROLE==='coach'&&!STAFF){var _c1=collapseBody(),_c2=seedMatches(),_c3=seedProgram(),_c4=migHop(),_c5=seedHop(),_c6=seedJump(),_c7=seedJump2(),_c8=seedJump3(),_c9=undoMas(),_c10=migGps(),_c11=migOv();if(_c1||_c2||_c3||_c4||_c5||_c6||_c7||_c8||_c9||_c10||_c11)save();}
     if(ROLE==='athlete'){ME=db.athletes[0]?db.athletes[0].id:null;selA=ME;}
     authHide();chrome();
     view=ROLE==='athlete'?'me':'home';
@@ -3243,7 +3243,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793458252;
+var BUILD_ID=1793460030;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -4377,18 +4377,58 @@ function vWk(){
     }).join('')+'</tr>';}).join('')+'</tbody></table></div><p class="dim" style="margin:8px 0 0">Üstteki değer hedef aralığı, kalın değer o haftanın şu ana kadar yapılan toplamıdır. Yeşil hedefte, mavi eksik, kırmızı fazla.</p></div>';
   return h;
 }
+
+// ---- Overload haftası yumuşatıldı, günlük Plan sekmesi
+SETK.push('ovV');
+var OVNEW={td:[230,260],hsr:[130,170],spr:[130,170],acc:[330,360],dec:[320,350]};
+DEFW.overload=JSON.parse(JSON.stringify(OVNEW));
+function migOv(){
+  if(db.ovV)return false;
+  var w=WG(),o=w.overload,old=JSON.stringify({td:[250,300],hsr:[200,200],spr:[200,200],acc:[350,400],dec:[300,400]});
+  if(o&&JSON.stringify({td:o.td,hsr:o.hsr,spr:o.spr,acc:o.acc,dec:o.dec})===old)w.overload=JSON.parse(JSON.stringify(OVNEW));
+  db.ovV=1;return true;
+}
+var PLD=null,PLO='';
+function wMid(t,k){var r=WG()[t]&&WG()[t][k];return r?(r[0]+r[1])/2:null;}
+function wFac(t,k){var a=wMid(t,k),b=wMid('maintain',k);return a&&b?a/b:1;}
+function vPlan(){
+  var wm=wkMatches(),M=wm.up[0],t=wkType(M),td=today();
+  if(!PLD){var cur=MDT[wd(td)];PLD=TDAYS.indexOf(cur)>-1?cur:'MD-4';}
+  var h='<div class="grp" style="margin-top:14px"><h2 style="margin:0 0 4px">Antrenman planı</h2><p class="dim" style="margin:0 0 8px">Her oyuncunun kendi en iyi maç değerine göre hedef metre ve sayı. '+trDate(M)+' maçı öncesi haftanın tipi: <b>'+WT[t]+'</b>.</p>';
+  var cyc={};TDAYS.forEach(function(L){for(var i=6;i>=1;i--){var d=dAdd(M,-i);if(wd(d)===TWD[L]){cyc[L]=d;break;}}});
+  var TD={deload:['Deload','Düşük yük haftası'],maintain:['Maintaining','Standart hafta'],overload:['Overload','Yüklenme haftası']};
+  h+='<div class="pl-sel rpt-tabs"><button type="button" class="pl-c'+(PLO==='t'?' on':'')+'" onclick="PLO=PLO===\'t\'?\'\':\'t\';render()"><small>HAFTA TİPİ</small><b>'+WT[t]+'</b><span>'+TD[t][1]+'</span><i>'+(PLO==='t'?'▴':'▾')+'</i></button><button type="button" class="pl-c'+(PLO==='d'?' on':'')+'" onclick="PLO=PLO===\'d\'?\'\':\'d\';render()"><small>ANTRENMAN GÜNÜ</small><b>'+PLD+'</b><span>'+(cyc[PLD]?DF[wd(cyc[PLD])]+' '+cyc[PLD].slice(8)+'.'+cyc[PLD].slice(5,7):'')+'</span><i>'+(PLO==='d'?'▴':'▾')+'</i></button></div>';
+  if(PLO==='t')h+='<div class="pl-pn rpt-tabs">'+Object.keys(WT).map(function(k){var f=function(m){return '×'+wFac(k,m).toFixed(2).replace('.',',');};return '<button type="button" class="pl-o'+(t===k?' on':'')+'" onclick="PLO=\'\';setWkType(\''+M+'\',\''+k+'\')"><span><b>'+WT[k]+'</b><small>'+TD[k][1]+'</small></span><span class="pl-f"><em>Mesafe '+f('td')+'</em><em>HSR '+f('hsr')+'</em><em>Sprint '+f('spr')+'</em></span></button>';}).join('')+'</div>';
+  if(PLO==='d')h+='<div class="pl-pn rpt-tabs">'+TDAYS.map(function(L){var d=cyc[L],r=TG()[L];return '<button type="button" class="pl-o'+(PLD===L?' on':'')+'" onclick="PLD=\''+L+'\';PLO=\'\';render()"><span><b>'+L+'</b><small>'+(d?DF[wd(d)]+' '+d.slice(8)+'.'+d.slice(5,7):'')+'</small></span><span class="pl-f"><em>Mesafe %'+r.td[0]+'-'+r.td[1]+'</em><em>HSR %'+r.hsr[0]+'-'+r.hsr[1]+'</em><em>Sprint %'+r.spr[0]+'-'+r.spr[1]+'</em></span></button>';}).join('')+'</div>';
+  var tt=TG()[PLD];if(!tt)return h+'<p class="dim">Bu gün için hedef yok.</p></div>';
+  var J=db.jersey||{},K=TV.map(function(x){return x[0];});
+  var all=db.athletes.filter(function(a){return !a.arch;}),inj=all.filter(isInj),act0=all.filter(function(a){return !isInj(a);});
+  act0.sort(function(x,y){var nx=parseInt(J[x.id],10),ny=parseInt(J[y.id],10);return (isNaN(nx)?999:nx)-(isNaN(ny)?999:ny)||x.n.localeCompare(y.n,'tr');});
+  var rows=act0.map(function(a){return {a:a,rf:refT(a.id,td)};});
+  var ok=rows.filter(function(r){return r.rf;}),no=rows.filter(function(r){return !r.rf;});
+  function rg(v,isM){return isM?Math.round(v/10)*10:Math.round(v);}
+  h+='<p class="dim" style="margin:0 0 8px">'+PLD+' hedefi ('+WT[t]+' haftası). Yüzdeler günlük tablodaki değerlerin hafta tipine göre ayarlanmış halidir.</p>';
+  h+='<div class="tw"><table class="tb rpt-t" style="min-width:560px"><thead><tr><th>Sporcu</th>'+TV.map(function(x){return '<th>'+x[2]+'</th>';}).join('')+'</tr></thead><tbody>';
+  h+='<tr class="avg"><td>Yüzde hedefi</td>'+K.map(function(k){var f=wFac(t,k),lo=tt[k][0]*f,hi=tt[k][1]*f;return '<td><b>%'+Math.round(lo)+'-'+Math.round(hi)+'</b></td>';}).join('')+'</tr>';
+  h+=ok.map(function(r){return '<tr><td>'+esc(J[r.a.id]?J[r.a.id]+' · ':'')+esc(r.a.n)+'</td>'+TV.map(function(x){var k=x[0],f=wFac(t,k),ref=r.rf[k];if(!ref)return '<td class="dim">-</td>';var m=x[3]==='m';return '<td><b>'+n0(rg(ref*tt[k][0]*f/100,m))+'-'+n0(rg(ref*tt[k][1]*f/100,m))+'</b></td>';}).join('')+'</tr>';}).join('');
+  h+='</tbody></table></div>';
+  if(no.length)h+='<p class="dim" style="margin:8px 0 0">Maç verisi olmadığı için hesaplanamayan: '+no.map(function(r){return esc(pSur(r.a));}).join(', ')+'</p>';
+  if(inj.length)h+='<p class="dim" style="margin:6px 0 0">Sakat (listede yok): '+inj.map(function(a){return esc(pSur(a));}).join(', ')+'</p>';
+  h+='<p class="dim" style="margin:6px 0 0">Mesafe değerleri 10 m, sayılar tam sayı olarak yuvarlanır.</p></div>';
+  return h;
+}
 var RPTAB='d',TGTAB='g';
 function vRpt(){
-  var b=RPTAB==='w'?vWk()+'<div style="height:14px"></div>'+vFlow():vRep();
+  var b=RPTAB==='w'?vWk()+'<div style="height:14px"></div>'+vFlow():RPTAB==='p'?vPlan():vRep();
   b=b.replace('<h1>','<h2 style="margin:12px 0 0">').replace('</h1>','</h2>');
-  return '<h1 class="rpt-h">Rapor</h1><div class="row rpt-tabs" style="gap:6px;margin:6px 0 4px;align-items:center"><button class="btn small'+(RPTAB==='d'?'':' ghost')+'" onclick="RPTAB=\'d\';render()">Günlük</button><button class="btn small'+(RPTAB==='w'?'':' ghost')+'" onclick="RPTAB=\'w\';render()">Haftalık</button><span style="flex:1"></span><button class="btn small ghost" onclick="rptPdf()">PDF indir</button></div>'+b;
+  return '<h1 class="rpt-h">Rapor</h1><div class="row rpt-tabs" style="gap:6px;margin:6px 0 4px;align-items:center"><button class="btn small'+(RPTAB==='d'?'':' ghost')+'" onclick="RPTAB=\'d\';render()">Günlük</button><button class="btn small'+(RPTAB==='w'?'':' ghost')+'" onclick="RPTAB=\'w\';render()">Haftalık</button><button class="btn small'+(RPTAB==='p'?'':' ghost')+'" onclick="RPTAB=\'p\';render()">Plan</button><span style="flex:1"></span><button class="btn small ghost" onclick="rptPdf()">PDF indir</button></div>'+b;
 }
 function rptPdf(){
-  var t=document.title;document.title='Fethiyespor U19 '+(RPTAB==='w'?'Haftalık':'Günlük')+' Rapor '+trDate(today());
+  var t=document.title;document.title='Fethiyespor U19 '+(RPTAB==='w'?'Haftalık':RPTAB==='p'?'Plan':'Günlük')+' Rapor '+trDate(today());
   try{window.print();}catch(e){toast('Yazdırma açılamadı. Bilgisayardan dene.');}
   setTimeout(function(){document.title=t;},1500);
 }
-(function(){var st=document.createElement('style');st.textContent='.rpt-t td:first-child,.rpt-t th:first-child{position:sticky;left:0;background:var(--bg);z-index:1;min-width:112px;white-space:nowrap}.rpt-t td,.rpt-t th{font-size:12.5px}@media print{.rpt-t td:first-child,.rpt-t th:first-child{position:static}.tw{overflow:visible!important}#mnbar,#mnov,#mndr,#bkbtn,#pushgate,.pcov,.rpt-tabs,.btn,button.btn,#toast,.toast{display:none!important}html,body{background:#fff!important;color:#000!important}body::before,html::after,body::after{display:none!important}body *{color:#000!important;text-shadow:none!important;box-shadow:none!important}.ptile,.rrow,.fl-c,.pcard{background:#fff!important;border:1px solid #888!important;break-inside:avoid}.fl-w{grid-template-columns:repeat(3,1fr)!important}.ptile{--st:#888}.fl-c.fut{opacity:1}.rpt-h{font-size:18px}#app{padding:0!important}}';document.head.appendChild(st);})();
+(function(){var st=document.createElement('style');st.textContent='.rpt-t td:first-child,.rpt-t th:first-child{position:sticky;left:0;background:var(--bg);z-index:1;min-width:112px;white-space:nowrap}.rpt-t td,.rpt-t th{font-size:12.5px}.pl-sel{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 8px}.pl-c{position:relative;text-align:left;font:inherit;color:var(--ink);border:1px solid var(--line);background:linear-gradient(180deg,var(--surface),var(--bg));border-radius:12px;padding:10px 12px;display:block}.pl-c.on{border-color:#e0b04a}.pl-c small{display:block;font-size:10px;letter-spacing:.14em;color:#e0b04a;font-weight:700}.pl-c b{display:block;font-size:22px;margin:2px 0 0}.pl-c span{display:block;font-size:12px;color:var(--muted)}.pl-c i{position:absolute;right:12px;top:12px;font-style:normal;color:var(--muted)}.pl-pn{display:grid;gap:6px;margin:0 0 10px;animation:plpn .28s ease both}@keyframes plpn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}.pl-o{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;font:inherit;color:var(--ink);border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px}.pl-o.on{border-color:#e0b04a;box-shadow:inset 3px 0 0 #e0b04a}.pl-o b{display:block;font-size:16px}.pl-o small{display:block;color:var(--muted);font-size:12px}.pl-f{display:flex;flex-direction:column;align-items:flex-end;gap:2px}.pl-f em{font-style:normal;font-size:11px;color:var(--muted)}@media(prefers-reduced-motion:reduce){.pl-pn{animation:none}}@media print{.rpt-t td:first-child,.rpt-t th:first-child{position:static}.tw{overflow:visible!important}#mnbar,#mnov,#mndr,#bkbtn,#pushgate,.pcov,.rpt-tabs,.btn,button.btn,#toast,.toast{display:none!important}html,body{background:#fff!important;color:#000!important}body::before,html::after,body::after{display:none!important}body *{color:#000!important;text-shadow:none!important;box-shadow:none!important}.ptile,.rrow,.fl-c,.pcard{background:#fff!important;border:1px solid #888!important;break-inside:avoid}.fl-w{grid-template-columns:repeat(3,1fr)!important}.ptile{--st:#888}.fl-c.fut{opacity:1}.rpt-h{font-size:18px}#app{padding:0!important}}';document.head.appendChild(st);})();
 var _vhPt=vHome;
 vHome=function(){
   var h=_vhPt(),k='<p class="dim">Sol üstteki üç çizgi';
