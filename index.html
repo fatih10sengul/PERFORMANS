@@ -3242,7 +3242,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793378679;
+var BUILD_ID=1793455922;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3764,7 +3764,7 @@ function vHome(){
     cs.push(['inbox',Object.keys(seen).length+'/'+db.athletes.length,'ANKET']);
     cs.push(['inbox',unseenN(),'AĞRI BİLDİRİMİ']);
   }
-  if(mnCan('gps')){var ds=db.gps.map(function(g){return g.d;}).sort();var ld=ds.length?ds[ds.length-1]:null;cs.push([STAFF?'gpsday':'gpsup',ld?trDate(ld).replace(/\.\d{4}$/,''):'-','SON GPS']);}
+  if(mnCan('load')){cs.push(['flow',MDT[wd(today())]||'-','BUGÜN']);}
   h+='<div class="ptiles hsm">'+cs.map(function(c){return '<button type="button" class="ptile" style="--st:var(--line)" onclick="mnGo(\''+c[0]+'\')"><span class="pt-no">'+esc(String(c[1]))+'</span><span class="pt-nm">'+esc(c[2])+'</span></button>';}).join('')+'</div>';
   h+='<p class="dim">Sol üstteki üç çizgi düğmesinden tüm bölümlere ulaşabilirsin.</p>';
   return h;
