@@ -2010,7 +2010,7 @@ async function boot(){
       showClaim();return;
     }
     await loadAll();
-    if(ROLE==='coach'&&!STAFF){var _c1=collapseBody(),_c2=seedMatches(),_c3=seedProgram(),_c4=migHop(),_c5=seedHop(),_c6=seedJump(),_c7=seedJump2(),_c8=seedJump3(),_c9=undoMas(),_c10=migGps(),_c11=migOv();if(_c1||_c2||_c3||_c4||_c5||_c6||_c7||_c8||_c9||_c10||_c11)save();}
+    if(ROLE==='coach'&&!STAFF){var _c1=collapseBody(),_c2=seedMatches(),_c3=seedProgram(),_c4=migHop(),_c5=seedHop(),_c6=seedJump(),_c7=seedJump2(),_c8=seedJump3(),_c9=undoMas(),_c10=migGps(),_c11=migOv(),_c12=migSets();if(_c12||_c1||_c2||_c3||_c4||_c5||_c6||_c7||_c8||_c9||_c10||_c11)save();}
     if(ROLE==='athlete'){ME=db.athletes[0]?db.athletes[0].id:null;selA=ME;}
     authHide();chrome();
     view=ROLE==='athlete'?'me':'home';
@@ -3243,7 +3243,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793460030;
+var BUILD_ID=1793549898;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -4379,9 +4379,18 @@ function vWk(){
 }
 
 // ---- Overload haftası yumuşatıldı, günlük Plan sekmesi
-SETK.push('ovV');
+SETK.push('ovV');SETK.push('setsV');
 var OVNEW={td:[230,260],hsr:[130,170],spr:[130,170],acc:[330,360],dec:[320,350]};
 DEFW.overload=JSON.parse(JSON.stringify(OVNEW));
+function migSets(){
+  if(db.setsV)return false;
+  [1,6,0].forEach(function(d){var dd=P()[d];if(!dd||!dd.ex)return;dd.ex.forEach(function(e){
+    var r=e.reps||'';
+    if(r.indexOf('Kuvvet 4-5')===0){e.sets='2';e.reps=r.replace('Kuvvet 4-5','Kuvvet 5-6').replace('Power 5 engel','Power 4-5 engel');}
+    else if(!e.sets&&!r){e.sets='2';e.reps='8-10';}
+  });});
+  db.setsV=1;return true;
+}
 function migOv(){
   if(db.ovV)return false;
   var w=WG(),o=w.overload,old=JSON.stringify({td:[250,300],hsr:[200,200],spr:[200,200],acc:[350,400],dec:[300,400]});
