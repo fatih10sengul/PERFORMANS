@@ -948,16 +948,16 @@ function scale(n,a,b){var o='<div class="row" style="gap:6px">';for(var i=a;i<=b
 function surveyForm(a){
   var td=SV().filter(function(x){return x.a===a.id&&x.d===today()})[0],h='';
   if(td)h+='<p class="dim" style="margin:0 0 6px">Bugünkü anketin gönderildi. Yeniden göndersen güncellenir.</p>';
-  h+='<label>Antrenman zorluğu (RPE, 0-10)</label>'+scale('rpe',0,10)+'<div class="two"><div><label for="sv-d">Süre (dk)</label><input id="sv-d" inputmode="decimal" value="'+esc(svState.dur)+'" onchange="svState.dur=this.value"></div><div><label for="sv-s">Uyku (saat)</label><input id="sv-s" inputmode="decimal" value="'+esc(svState.sleep)+'" onchange="svState.sleep=this.value"></div></div><label>Yorgunluk (1 az, 5 çok)</label>'+scale('fat',1,5)+'<label>Genel kas ağrısı (1 az, 5 çok)</label>'+scale('sore',1,5);
+  h+='<label for="sv-s">Uyku (saat)</label><input id="sv-s" inputmode="decimal" value="'+esc(svState.sleep)+'" onchange="svState.sleep=this.value"><label>Yorgunluk (1 az, 5 çok)</label>'+scale('fat',1,5)+'<label>Genel kas ağrısı (1 az, 5 çok)</label>'+scale('sore',1,5);
   h+='<label>Ağrı hissettiğin yerlere dokun</label><div class="row" style="margin-bottom:8px"><button class="btn small'+(painV==='F'?'':' ghost')+'" onclick="painV=\'F\';render()">Ön</button><button class="btn small'+(painV==='B'?'':' ghost')+'" onclick="painV=\'B\';render()">Arka</button></div>'+bodySvg(painV,'pick',painSel);
   var ks=Object.keys(painSel);
   if(ks.length)h+='<div style="margin-top:10px">'+ks.map(function(k){return '<div class="row" style="justify-content:space-between;border-bottom:1px solid var(--line);padding:8px 0"><span>'+esc(regLabel(k))+'</span><span class="row" style="gap:6px"><select aria-label="Ağrı şiddeti" style="width:80px;min-height:38px" onchange="setPain(\''+k+'\',this.value)">'+[1,2,3,4,5,6,7,8,9,10].map(function(i){return '<option'+(i===painSel[k]?' selected':'')+'>'+i+'</option>'}).join('')+'</select><button class="btn small ghost" onclick="togglePain(\''+k+'\')">Kaldır</button></span></div>'}).join('')+'<p class="dim" style="margin:6px 0 0">Şiddet: 1 hafif, 10 çok şiddetli.</p></div>';
   return h+'<div class="row" style="margin-top:16px"><button class="btn" onclick="submitSurvey()">Anketi gönder</button></div>';
 }
 function submitSurvey(){
-  var a=ath(selA),s=svState,dur=parseFloat(String(s.dur).replace(',','.')),sl=parseFloat(String(s.sleep).replace(',','.')),pain=Object.keys(painSel).map(function(k){return {k:k,v:painSel[k]}});
-  if(s.rpe==null&&!isFinite(dur)&&!isFinite(sl)&&s.fat==null&&s.sore==null&&!pain.length){toast('En az bir alanı doldur.');return;}
-  var rec={id:uid(),a:a.id,d:today(),rpe:s.rpe,dur:isFinite(dur)?dur:null,sleep:isFinite(sl)?sl:null,fat:s.fat,sore:s.sore,pain:pain,seen:false};
+  var a=ath(selA),s=svState,dur=NaN,sl=parseFloat(String(s.sleep).replace(',','.')),pain=Object.keys(painSel).map(function(k){return {k:k,v:painSel[k]}});
+  if(!isFinite(sl)&&s.fat==null&&s.sore==null&&!pain.length){toast('En az bir alanı doldur.');return;}
+  var rec={id:uid(),a:a.id,d:today(),rpe:null,dur:null,sleep:isFinite(sl)?sl:null,fat:s.fat,sore:s.sore,pain:pain,seen:false};
   db.surveys=SV().filter(function(x){return !(x.a===a.id&&x.d===rec.d)});db.surveys.push(rec);
   svState=newSv();painSel={};save();render();toast('Anket gönderildi, antrenörüne iletildi');
 }
@@ -3243,7 +3243,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793549898;
+var BUILD_ID=1793630959;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
