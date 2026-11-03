@@ -209,7 +209,7 @@ function vAthletes(){
   h += '<div class="list">';
   db.athletes.slice().sort(function(a,b){return a.n.localeCompare(b.n,'tr');}).forEach(function(a){
     var ld=lastDate(a.id), ag=age(a.y);
-    h += '<button class="item" onclick="go(\'profile\',\''+a.id+'\')"><div><b>'+esc(a.n)+'</b><br><span>'+esc(a.p)+(ag?', '+ag+' yaş':'')+'</span></div><span>'+(ld?'Son test '+trDate(ld):'Test yok')+'</span></button>';
+    h += '<button class="item" onclick="go(\'profile\',\''+a.id+'\')"><div><b>'+esc(a.n)+'</b><br><span>'+esc(a.p)+(ag?', '+ag+' yaş':'')+'</span></div></button>';
   });
   h += '</div>';
   return h;
@@ -3243,7 +3243,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793630959;
+var BUILD_ID=1793738410;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
