@@ -3243,7 +3243,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793739387;
+var BUILD_ID=1793802148;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -3591,6 +3591,7 @@ async function loadStaff(){
   finally{STLOAD=false;if(view==='staff')render();}
 }
 async function stApprove(id){var r=await stRpc(id,{},true);if(r.error){toast(trErr(r.error));return;}toast('Antrenör olarak onaylandı. İzinleri seç.');loadStaff();}
+async function stReject(id){if(!confirm('Bu hesap reddedilip silinsin mi? Bu işlem geri alınamaz.'))return;var r=await SBC.rpc('reject_account',{target:id});if(r.error){toast(trErr(r.error)+' (SQL çalıştırıldı mı?)');return;}toast('Hesap silindi');loadStaff();}
 async function stPerm(id,k,on){
   var cur=Object.assign({},(STL&&STL.a[id])||{});cur[k]=!!on;STL.a[id]=cur;
   var r=await stRpc(id,cur,true);if(r.error){toast(trErr(r.error));loadStaff();return;}toast('Kaydedildi');
@@ -3605,7 +3606,7 @@ function vStaff(){
     var pm=STL.a[x.id]||{};
     return '<div class="form"><b>'+esc(x.email)+'</b>'+STCAT.map(function(c){return '<label class="chk"><input type="checkbox" '+(pm[c[0]]?'checked':'')+' onchange="stPerm(\''+x.id+'\',\''+c[0]+'\',this.checked)">'+c[1]+'</label>';}).join('')+'<div class="row" style="margin-top:10px"><button class="btn small ghost" onclick="stOff(\''+x.id+'\')">Erişimi kapat</button></div></div>';
   }).join(''):'<p class="dim">Henüz antrenör yok.</p>')+'</div>';
-  h+='<div class="grp"><h2>Onay bekleyen hesaplar</h2><p class="dim" style="margin-top:0">Antrenörün uygulamadan e-posta ve şifreyle kayıt olması yeterli. Hesap burada görünür. Sporcu olup henüz davet kodu girmemiş hesaplar da burada listelenir, onları onaylama.</p>'+(pend.length?pend.map(function(x){return '<div class="item" style="cursor:default"><div><b>'+esc(x.email)+'</b></div><button class="btn small" onclick="stApprove(\''+x.id+'\')">Antrenör olarak onayla</button></div>';}).join(''):'<p class="dim">Bekleyen hesap yok.</p>')+'</div>';
+  h+='<div class="grp"><h2>Onay bekleyen hesaplar</h2><p class="dim" style="margin-top:0">Antrenörün uygulamadan e-posta ve şifreyle kayıt olması yeterli. Hesap burada görünür. Sporcu olup henüz davet kodu girmemiş hesaplar da burada listelenir, onları onaylama.</p>'+(pend.length?pend.map(function(x){return '<div class="form"><b style="word-break:break-all">'+esc(x.email)+'</b><div class="row" style="margin-top:10px;gap:8px"><button class="btn small" onclick="stApprove(\''+x.id+'\')">Antrenör olarak onayla</button><button class="btn small ghost" onclick="stReject(\''+x.id+'\')">Reddet</button></div></div>';}).join(''):'<p class="dim">Bekleyen hesap yok.</p>')+'</div>';
   return h;
 }
 var _rdSt=render;
