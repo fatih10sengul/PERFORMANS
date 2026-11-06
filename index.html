@@ -992,6 +992,12 @@ function flags(s){var f=[];if(s.pain.some(function(p){return p.v>=7}))f.push('Y�
 function unseenN(){return SV().filter(function(s){return s.pain.length&&!s.seen}).length;}
 function markSeen(id){SV().forEach(function(s){if(s.id===id)s.seen=true});save();render();}
 function markAll(){SV().forEach(function(s){s.seen=true});save();render();toast('Hepsi görüldü olarak işaretlendi');}
+function svScores(s){
+  var rows=[['Uyku',s.sleep,' sa',null],['Yorgunluk',s.fat,'/10',s.fat],['Kas ağrısı',s.sore,'/10',s.sore]].filter(function(r){return r[1]!=null;});
+  if(s.rpe!=null||s.dur)rows.unshift(['Seans',(s.rpe!=null?'RPE '+s.rpe:'')+(s.rpe!=null&&s.dur?' · ':'')+(s.dur?s.dur+' dk':''),'',null]);
+  if(!rows.length)return '';
+  return '<div class="svsc">'+rows.map(function(r){var c=r[3]==null?'':(r[3]>=7?'c-bad':r[3]>=4?'c-warn':'c-low');return '<div class="svr"><span>'+r[0]+'</span><b class="'+c+'">'+esc(String(r[1]).replace('.',','))+'<small>'+r[2]+'</small></b></div>';}).join('')+'</div>';
+}
 function painMaps(s){
   if(!s.pain||!s.pain.length)return '';
   var d={},sd=[];s.pain.forEach(function(p){d[p.k]=Math.max(.15,p.v/10);var v=String(p.k).charAt(0);if((v==='F'||v==='B')&&sd.indexOf(v)<0)sd.push(v);});
@@ -1011,7 +1017,7 @@ function vInbox(){
   if(!list.length)return h+'<div class="empty"><p>Henüz gelen anket yok.</p></div>';
   h+='<div class="list">'+list.map(function(s){var a=ath(s.a);if(!a)return '';var fl=flags(s),load=s.rpe!=null&&s.dur?Math.round(s.rpe*s.dur):null;
     return '<div class="rank" style="'+(s.seen?'':'border-left:4px solid var(--bad);padding-left:10px')+'"><div class="top"><span class="who">'+av(a,36)+'<span><b>'+esc(a.n)+'</b><br><span class="dim">'+dlabel(s.d)+'</span></span></span>'+(s.seen?'<span class="dim">Görüldü</span>':'<span class="chip c-bad">Yeni</span>')+'</div>'
-    +painMaps(s)+'<p class="dim" style="margin:6px 0">'+[s.rpe!=null?'RPE '+s.rpe:'',s.dur?s.dur+' dk':'',load?'seans yükü '+load:'',s.sleep!=null?'uyku '+s.sleep+' sa':'',s.fat!=null?'yorgunluk '+s.fat+'/10':'',s.sore!=null?'kas ağrısı '+s.sore+'/10':''].filter(Boolean).join(', ')+'</p>'
+    +painMaps(s)+svScores(s)
     +(s.pain.length?'<div class="row" style="gap:6px">'+s.pain.map(function(p){return '<span class="chip '+(p.v>=7?'c-bad':p.v>=4?'c-warn':'c-low')+'">'+esc(regLabel(p.k))+' '+p.v+'/10</span>'}).join('')+'</div>':'')
     +(fl.length?'<p style="margin:6px 0 0"><b class="c-bad">'+fl.join(', ')+'</b></p>':'')
     +'<div class="row" style="margin-top:8px">'+(s.seen?'':'<button class="btn small" onclick="markSeen(\''+s.id+'\')">Görüldü</button>')+'<button class="btn small ghost" onclick="go(\'profile\',\''+a.id+'\')">Profile git</button></div></div>';}).join('')+'</div><p class="note">Ağrı bildirimi sporcunun kendi ifadesidir, teşhis değildir. Kırmızı işaretler bir bakılması gerektiğini gösterir.</p>';
@@ -3250,7 +3256,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793990248;
+var BUILD_ID=1793990424;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -4007,6 +4013,7 @@ bodySvg=function(v,mode,data){
 };
 
 
+(function(){var st=document.createElement('style');st.textContent='.svsc{margin:8px 0;border:1px solid var(--line);border-radius:10px;overflow:hidden}.svr{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-top:1px solid var(--line);background:rgba(0,0,0,.14)}.svr:first-child{border-top:0}.svr span{color:var(--muted);font-size:14px}.svr b{font-size:22px;font-weight:800}.svr b small{font-size:13px;font-weight:600;color:var(--muted);margin-left:2px}';document.head.appendChild(st);})();
 // ---- Kulüp renkleri (lacivert-kırmızı-beyaz) ve açık/koyu tema seçeneği
 (function(){
   var st=document.createElement('style');
