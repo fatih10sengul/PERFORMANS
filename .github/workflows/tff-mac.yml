@@ -24,6 +24,7 @@ jobs:
           git config user.email "github-actions@users.noreply.github.com"
           git add index.html sw.js
           git commit -m "Maç verisi: TFF'den otomatik güncelleme"
+          git pull --rebase origin main
           git push
           gh api -X POST "repos/${{ github.repository }}/pages/builds" || true
         env:
