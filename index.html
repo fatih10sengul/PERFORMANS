@@ -998,6 +998,31 @@ function svScores(s){
   if(!rows.length)return '';
   return '<div class="svsc">'+rows.map(function(r){var c=r[3]==null?'':(r[3]>=7?'c-bad':r[3]>=4?'c-warn':'c-low');return '<div class="svr"><span>'+r[0]+'</span><b class="'+c+'">'+esc(String(r[1]).replace('.',','))+'<small>'+r[2]+'</small></b></div>';}).join('')+'</div>';
 }
+function svpHtml(day,aid){
+  var L=SV().filter(function(s){return s.d===day&&ath(s.a)&&(!aid||s.a===aid);});
+  var mx=function(s){return s.pain.reduce(function(m,p){return Math.max(m,p.v);},0);};
+  L.sort(function(x,y){return (mx(y)-mx(x))||String(ath(x.a).n).localeCompare(String(ath(y.a).n));});
+  var col=function(v){return v>=7?'#c62828':v>=4?'#b7791f':'#1d6fb8';};
+  var val=function(v,u,c){return v==null?'-':'<b style="color:'+(c==null?'#111':col(c))+'">'+esc(String(v).replace('.',','))+'</b><i>'+u+'</i>';};
+  var h='<div class="svp-h"><b>FETHİYESPOR U19</b><span>'+(aid?'Kişisel Anket Raporu':'Takım Anket Raporu')+'</span><em>'+esc(dlabel(day))+'</em></div>';
+  if(!aid){
+    h+='<p class="svp-s">'+L.length+' anket · '+L.filter(function(s){return s.pain.length;}).length+' ağrı bildirimi</p>';
+    if(!L.length)return h+'<p>Bu gün anket yok.</p>';
+    return h+'<table class="svp-t"><thead><tr><th>Sporcu</th><th>Uyku</th><th>Yorgunluk</th><th>Kas ağrısı</th><th>Ağrı bölgeleri</th></tr></thead><tbody>'+L.map(function(s){
+      return '<tr><td><b>'+esc(ath(s.a).n)+'</b></td><td>'+val(s.sleep,' sa',null)+'</td><td>'+val(s.fat,'/10',s.fat)+'</td><td>'+val(s.sore,'/10',s.sore)+'</td><td>'+(s.pain.length?s.pain.map(function(p){return '<span>'+esc(regLabel(p.k))+' <b style="color:'+col(p.v)+'">'+p.v+'/10</b></span>';}).join(''):'<em>Yok</em>')+'</td></tr>';}).join('')+'</tbody></table>';
+  }
+  if(!L.length)return h+'<p>Bu gün bu sporcunun anketi yok.</p>';
+  return h+'<div class="svp-g one">'+L.map(function(s){var a=ath(s.a),sc=[['Uyku',s.sleep,' sa',null],['Yorgunluk',s.fat,'/10',s.fat],['Kas ağrısı',s.sore,'/10',s.sore]];
+    return '<div class="svp-c"><div class="svp-n">'+esc(a.n)+'</div><div class="svp-r">'+sc.map(function(r){return '<div><small>'+r[0]+'</small>'+val(r[1],r[2],r[3])+'</div>';}).join('')+'</div>'
+      +(s.pain.length?painMaps(s)+'<ul>'+s.pain.map(function(p){return '<li><span>'+esc(regLabel(p.k))+'</span><b style="color:'+col(p.v)+'">'+p.v+'/10</b></li>';}).join('')+'</ul>':'<p class="svp-0">Ağrı bildirimi yok</p>')+'</div>';}).join('')+'</div>';
+}
+function inboxPdf(aid){
+  var d=document.getElementById('svp');if(d)d.remove();d=document.createElement('div');d.id='svp';d.innerHTML=svpHtml(inboxDay||today(),aid);document.body.appendChild(d);
+  var t=document.title,an=aid&&ath(aid);document.title='Fethiyespor U19 '+(an?an.n+' ':'Takım ')+'Anket Raporu '+trDate(inboxDay||today());document.body.classList.add('pr-sv');
+  var done=function(){document.body.classList.remove('pr-sv');var e=document.getElementById('svp');if(e)e.remove();document.title=t;};
+  window.addEventListener('afterprint',done,{once:true});
+  try{window.print();}catch(e){toast('Yazdırma açılamadı. Bilgisayardan dene.');done();}
+}
 function painMaps(s){
   if(!s.pain||!s.pain.length)return '';
   var d={},sd=[];s.pain.forEach(function(p){d[p.k]=Math.max(.15,p.v/10);var v=String(p.k).charAt(0);if((v==='F'||v==='B')&&sd.indexOf(v)<0)sd.push(v);});
@@ -1017,6 +1042,7 @@ function vInbox(){
   var dayAll=SV().filter(function(s){return s.d===inboxDay;}),dayPain=dayAll.filter(function(s){return s.pain.length;});
   var other=SV().filter(function(s){return s.d!==inboxDay&&s.pain.length&&!s.seen;}),oLast=other.reduce(function(m,s){return s.d>m?s.d:m;},'');
   h+='<div class="dbar"><button class="btn small ghost" aria-label="Önceki gün" onclick="inboxDay=dAdd(inboxDay,-1);render()">◀</button><label class="dpick"><b>'+esc(dlabel(inboxDay))+'</b><input type="date" value="'+inboxDay+'" onchange="if(this.value){inboxDay=this.value;render();}"></label><button class="btn small ghost" aria-label="Sonraki gün" onclick="inboxDay=dAdd(inboxDay,1);render()">▶</button>'+(inboxDay!==today()?'<button class="btn small" onclick="inboxDay=today();render()">Bugün</button>':'')+'</div>';
+  h+='<div class="row" style="margin:8px 0 0"><button class="btn small ghost" onclick="inboxPdf()">Takım raporu PDF</button></div>';
   h+='<p class="dim" style="margin:6px 0">'+dayAll.length+' anket · '+dayPain.length+' ağrı</p>';
   if(other.length)h+='<button class="btn small ghost" style="margin:0 0 8px" onclick="inboxDay=\''+oLast+'\';render()">Başka günde '+other.length+' yeni ağrı var</button>';
   h+='<div class="row" style="margin:12px 0 6px"><button class="btn small'+(inboxAll?' ghost':'')+'" onclick="inboxAll=false;render()">Ağrı bildirimleri</button><button class="btn small'+(inboxAll?'':' ghost')+'" onclick="inboxAll=true;render()">Tüm anketler</button>'+(n?'<button class="btn small ghost" onclick="markAll()">Hepsini görüldü yap</button>':'')+'</div>';
@@ -1027,7 +1053,7 @@ function vInbox(){
     +painMaps(s)+svScores(s)
     +(s.pain.length?'<div class="row" style="gap:6px">'+s.pain.map(function(p){return '<span class="chip '+(p.v>=7?'c-bad':p.v>=4?'c-warn':'c-low')+'">'+esc(regLabel(p.k))+' '+p.v+'/10</span>'}).join('')+'</div>':'')
     +(fl.length?'<p style="margin:6px 0 0"><b class="c-bad">'+fl.join(', ')+'</b></p>':'')
-    +'<div class="row" style="margin-top:8px">'+(s.seen?'':'<button class="btn small" onclick="markSeen(\''+s.id+'\')">Görüldü</button>')+'<button class="btn small ghost" onclick="go(\'profile\',\''+a.id+'\')">Profile git</button></div></div>';}).join('')+'</div>'+hm;
+    +'<div class="row" style="margin-top:8px">'+(s.seen?'':'<button class="btn small" onclick="markSeen(\''+s.id+'\')">Görüldü</button>')+'<button class="btn small ghost" onclick="go(\'profile\',\''+a.id+'\')">Profile git</button><button class="btn small ghost" onclick="inboxPdf(\''+a.id+'\')">Kişisel PDF</button></div></div>';}).join('')+'</div>'+hm;
   return h;
 }
 
@@ -3263,7 +3289,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793991026;
+var BUILD_ID=1793991636;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -4022,6 +4048,7 @@ bodySvg=function(v,mode,data){
 
 (function(){var st=document.createElement('style');st.textContent='.svsc{margin:8px 0;border:1px solid var(--line);border-radius:10px;overflow:hidden}.svr{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-top:1px solid var(--line);background:rgba(0,0,0,.14)}.svr:first-child{border-top:0}.svr span{color:var(--muted);font-size:14px}.svr b{font-size:22px;font-weight:800}.svr b small{font-size:13px;font-weight:600;color:var(--muted);margin-left:2px}';document.head.appendChild(st);})();
 (function(){var st=document.createElement('style');st.textContent='.dbar{display:flex;align-items:center;gap:8px;margin:10px 0 2px}.dpick{flex:1;position:relative;text-align:center;border:1px solid var(--line);border-radius:10px;padding:9px 6px;background:var(--surface);cursor:pointer}.dpick b{font-size:15px}.dpick input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}';document.head.appendChild(st);})();
+(function(){var st=document.createElement('style');st.textContent='#svp{display:none}@media print{body.pr-sv>*:not(#svp){display:none!important}body.pr-sv #svp{display:block!important;color:#111;background:#fff;font-family:Inter,Arial,sans-serif}@page{size:A4;margin:12mm}#svp .svp-h{display:flex;align-items:baseline;gap:12px;border-bottom:3px solid #c8102e;padding-bottom:6px}#svp .svp-h b{font-size:18px;color:#0e1b33}#svp .svp-h span{font-size:15px;flex:1}#svp .svp-h em{font-style:normal;font-size:14px;font-weight:700}#svp .svp-s{margin:6px 0 10px;font-size:12px;color:#444}#svp .svp-g{display:grid;grid-template-columns:1fr 1fr;gap:8px}#svp .svp-c{border:1px solid #bbb;border-radius:6px;padding:8px;break-inside:avoid}#svp .svp-n{font-size:14px;font-weight:800;margin-bottom:4px}#svp .svp-r{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;text-align:center}#svp .svp-r small{display:block;font-size:9px;color:#555}#svp .svp-r b{font-size:15px}#svp .svp-r i{font-style:normal;font-size:9px;color:#555;margin-left:1px}#svp .svp-t{width:100%;border-collapse:collapse;font-size:11.5px}#svp .svp-t th{text-align:left;font-size:10px;color:#555;border-bottom:2px solid #0e1b33;padding:4px 6px}#svp .svp-t td{padding:5px 6px;border-bottom:1px solid #ddd;vertical-align:top}#svp .svp-t tr{break-inside:avoid}#svp .svp-t td i{font-style:normal;font-size:9px;color:#555;margin-left:1px}#svp .svp-t td span{display:block}#svp .svp-t em{font-style:normal;color:#888}#svp .svp-g.one{grid-template-columns:1fr}#svp .one svg{max-width:230px!important}#svp .one .svp-n{font-size:18px}#svp .one .svp-r b{font-size:22px}#svp .one ul{font-size:13px}#svp .two{display:grid;grid-template-columns:1fr 1fr;gap:4px}#svp svg{max-width:105px!important}#svp ul{list-style:none;margin:4px 0 0;padding:0;font-size:11px}#svp li{display:flex;justify-content:space-between;border-top:1px solid #e3e3e3;padding:2px 0}#svp .svp-0{margin:6px 0 0;font-size:11px;color:#777}#svp .two,#svp svg,#svp .svp-c{-webkit-print-color-adjust:exact;print-color-adjust:exact}}';document.head.appendChild(st);})();
 // ---- Kulüp renkleri (lacivert-kırmızı-beyaz) ve açık/koyu tema seçeneği
 (function(){
   var st=document.createElement('style');
