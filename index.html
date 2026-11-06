@@ -987,7 +987,7 @@ function delEx(id){if(pendingDel!=='ex'+id){pendingDel='ex'+id;render();return;}
 function toggleDone(aid,d,eid){var k=aid+'|'+d+'|'+eid;DN()[k]=!DN()[k];save();render();}
 
 // ---- Gelen kutusu (antrenör)
-var inboxAll=false;
+var inboxAll=false,inboxDay=null;
 function flags(s){var f=[];if(s.pain.some(function(p){return p.v>=7}))f.push('Yüksek şiddet');var lim=dnum(s.d)-7;if(s.pain.some(function(p){return SV().filter(function(x){return x.a===s.a&&dnum(x.d)>lim&&dnum(x.d)<=dnum(s.d)&&x.pain.some(function(q){return q.k===p.k})}).length>=3}))f.push('Tekrarlayan');return f;}
 function unseenN(){return SV().filter(function(s){return s.pain.length&&!s.seen}).length;}
 function markSeen(id){SV().forEach(function(s){if(s.id===id)s.seen=true});save();render();}
@@ -1006,21 +1006,28 @@ function painMaps(s){
   return '<div class="'+(sd.length>1?'two':'')+'" style="margin:8px 0;'+(sd.length>1?'':'max-width:48%;margin-left:auto;margin-right:auto')+'">'+sd.map(function(v){return '<div>'+bodySvg(v,'heat',d)+'</div>';}).join('')+'</div>';
 }
 function vInbox(){
-  var h='<h1>Gelen kutusu</h1><p class="sub">Sporcuların anketleri ve ağrı bildirimleri</p>',lim=dnum(today())-14,cnt={},seen={};
+  var h='<h1>Gelen kutusu</h1>',lim=dnum(today())-14,cnt={},seen={};
   SV().forEach(function(s){if(dnum(s.d)<=lim)return;s.pain.forEach(function(p){var u=s.a+'|'+s.d+'|'+p.k;if(!seen[u]){seen[u]=1;cnt[p.k]=(cnt[p.k]||0)+1;}});});
   var mx=Math.max.apply(null,Object.keys(cnt).map(function(k){return cnt[k]}).concat([1])),heat={};Object.keys(cnt).forEach(function(k){heat[k]=cnt[k]/mx});
   var top=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a]}).slice(0,5);
-  if(top.length)h+='<h3 class="ct">Takım ağrı haritası, son 14 gün</h3><div class="two"><div>'+bodySvg('F','heat',heat)+'</div><div>'+bodySvg('B','heat',heat)+'</div></div>'+top.map(function(k){return '<div class="rank"><div class="top"><span>'+esc(regLabel(k))+'</span><b>'+cnt[k]+' bildirim</b></div></div>'}).join('');
+  var hm='';
+  if(top.length)hm+='<h3 class="ct">Takım ağrı haritası, son 14 gün</h3><div class="two"><div>'+bodySvg('F','heat',heat)+'</div><div>'+bodySvg('B','heat',heat)+'</div></div>'+top.map(function(k){return '<div class="rank"><div class="top"><span>'+esc(regLabel(k))+'</span><b>'+cnt[k]+' bildirim</b></div></div>'}).join('');
   var n=unseenN();
-  h+='<div class="row" style="margin:18px 0 6px"><button class="btn small'+(inboxAll?' ghost':'')+'" onclick="inboxAll=false;render()">Ağrı bildirimleri</button><button class="btn small'+(inboxAll?'':' ghost')+'" onclick="inboxAll=true;render()">Tüm anketler</button>'+(n?'<button class="btn small ghost" onclick="markAll()">Hepsini görüldü yap</button>':'')+'</div>';
-  var list=SV().filter(function(s){return inboxAll||s.pain.length}).sort(function(x,y){return (x.seen-y.seen)||(x.d<y.d?1:x.d>y.d?-1:0)}).slice(0,40);
-  if(!list.length)return h+'<div class="empty"><p>Henüz gelen anket yok.</p></div>';
+  if(!inboxDay)inboxDay=today();
+  var dayAll=SV().filter(function(s){return s.d===inboxDay;}),dayPain=dayAll.filter(function(s){return s.pain.length;});
+  var other=SV().filter(function(s){return s.d!==inboxDay&&s.pain.length&&!s.seen;}),oLast=other.reduce(function(m,s){return s.d>m?s.d:m;},'');
+  h+='<div class="dbar"><button class="btn small ghost" aria-label="Önceki gün" onclick="inboxDay=dAdd(inboxDay,-1);render()">◀</button><label class="dpick"><b>'+esc(dlabel(inboxDay))+'</b><input type="date" value="'+inboxDay+'" onchange="if(this.value){inboxDay=this.value;render();}"></label><button class="btn small ghost" aria-label="Sonraki gün" onclick="inboxDay=dAdd(inboxDay,1);render()">▶</button>'+(inboxDay!==today()?'<button class="btn small" onclick="inboxDay=today();render()">Bugün</button>':'')+'</div>';
+  h+='<p class="dim" style="margin:6px 0">'+dayAll.length+' anket · '+dayPain.length+' ağrı</p>';
+  if(other.length)h+='<button class="btn small ghost" style="margin:0 0 8px" onclick="inboxDay=\''+oLast+'\';render()">Başka günde '+other.length+' yeni ağrı var</button>';
+  h+='<div class="row" style="margin:12px 0 6px"><button class="btn small'+(inboxAll?' ghost':'')+'" onclick="inboxAll=false;render()">Ağrı bildirimleri</button><button class="btn small'+(inboxAll?'':' ghost')+'" onclick="inboxAll=true;render()">Tüm anketler</button>'+(n?'<button class="btn small ghost" onclick="markAll()">Hepsini görüldü yap</button>':'')+'</div>';
+  var list=dayAll.filter(function(s){return inboxAll||s.pain.length}).sort(function(x,y){return (x.seen-y.seen)||(String(ath(x.a)&&ath(x.a).n).localeCompare(String(ath(y.a)&&ath(y.a).n)))});
+  if(!list.length)return h+'<div class="empty"><p>'+(inboxAll?'Bu gün anket gelmemiş.':'Bu gün ağrı bildirimi yok.')+'</p></div>'+hm;
   h+='<div class="list">'+list.map(function(s){var a=ath(s.a);if(!a)return '';var fl=flags(s),load=s.rpe!=null&&s.dur?Math.round(s.rpe*s.dur):null;
     return '<div class="rank" style="'+(s.seen?'':'border-left:4px solid var(--bad);padding-left:10px')+'"><div class="top"><span class="who">'+av(a,36)+'<span><b>'+esc(a.n)+'</b><br><span class="dim">'+dlabel(s.d)+'</span></span></span>'+(s.seen?'<span class="dim">Görüldü</span>':'<span class="chip c-bad">Yeni</span>')+'</div>'
     +painMaps(s)+svScores(s)
     +(s.pain.length?'<div class="row" style="gap:6px">'+s.pain.map(function(p){return '<span class="chip '+(p.v>=7?'c-bad':p.v>=4?'c-warn':'c-low')+'">'+esc(regLabel(p.k))+' '+p.v+'/10</span>'}).join('')+'</div>':'')
     +(fl.length?'<p style="margin:6px 0 0"><b class="c-bad">'+fl.join(', ')+'</b></p>':'')
-    +'<div class="row" style="margin-top:8px">'+(s.seen?'':'<button class="btn small" onclick="markSeen(\''+s.id+'\')">Görüldü</button>')+'<button class="btn small ghost" onclick="go(\'profile\',\''+a.id+'\')">Profile git</button></div></div>';}).join('')+'</div><p class="note">Ağrı bildirimi sporcunun kendi ifadesidir, teşhis değildir. Kırmızı işaretler bir bakılması gerektiğini gösterir.</p>';
+    +'<div class="row" style="margin-top:8px">'+(s.seen?'':'<button class="btn small" onclick="markSeen(\''+s.id+'\')">Görüldü</button>')+'<button class="btn small ghost" onclick="go(\'profile\',\''+a.id+'\')">Profile git</button></div></div>';}).join('')+'</div>'+hm;
   return h;
 }
 
@@ -3256,7 +3263,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793990424;
+var BUILD_ID=1793991026;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -4014,6 +4021,7 @@ bodySvg=function(v,mode,data){
 
 
 (function(){var st=document.createElement('style');st.textContent='.svsc{margin:8px 0;border:1px solid var(--line);border-radius:10px;overflow:hidden}.svr{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-top:1px solid var(--line);background:rgba(0,0,0,.14)}.svr:first-child{border-top:0}.svr span{color:var(--muted);font-size:14px}.svr b{font-size:22px;font-weight:800}.svr b small{font-size:13px;font-weight:600;color:var(--muted);margin-left:2px}';document.head.appendChild(st);})();
+(function(){var st=document.createElement('style');st.textContent='.dbar{display:flex;align-items:center;gap:8px;margin:10px 0 2px}.dpick{flex:1;position:relative;text-align:center;border:1px solid var(--line);border-radius:10px;padding:9px 6px;background:var(--surface);cursor:pointer}.dpick b{font-size:15px}.dpick input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}';document.head.appendChild(st);})();
 // ---- Kulüp renkleri (lacivert-kırmızı-beyaz) ve açık/koyu tema seçeneği
 (function(){
   var st=document.createElement('style');
