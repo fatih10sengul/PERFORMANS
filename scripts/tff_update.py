@@ -149,15 +149,20 @@ def build_players(t):
     return rows
 
 
-def parse_match(h, home_us, gf, ga):
-    """h: maç sayfası. home_us: Fethiyespor ev sahibi mi. Skorla tutarsızsa ValueError."""
+def parse_match_full(h, home_us, gf=None, ga=None):
+    """h: maç sayfası. home_us: Fethiyespor ev sahibi mi. gf/ga verilmişse skorla tutarsızsa ValueError.
+    gf/ga None ise (fikstürde skor yok) skor sayfadaki gol listesinden hesaplanır. (oyuncular, gf, ga) döner."""
     t = {1: parse_team(h, 1), 2: parse_team(h, 2)}
     us, them = (1, 2) if home_us else (2, 1)
     f = sum(t[us]['goals'].values()) + sum(t[them]['own'].values())
     a = sum(t[them]['goals'].values()) + sum(t[us]['own'].values())
-    if (f, a) != (gf, ga):
+    if gf is not None and (f, a) != (gf, ga):
         raise ValueError('gol sayısı skorla uyuşmuyor (kadro %d-%d, skor %d-%d)' % (f, a, gf, ga))
-    return build_players(t[us])
+    return build_players(t[us]), f, a
+
+
+def parse_match(h, home_us, gf, ga):
+    return parse_match_full(h, home_us, gf, ga)[0]
 
 
 def js_str(s):
@@ -182,6 +187,7 @@ def main(index='index.html', sw='sw.js', today=None, fetcher=None, dry=False):
     block = src[a:end + 2]
     have = set(int(x) for x in re.findall(r'\{tff:(\d+)', block))
     new, problems, empty = [], [], 0
+    seen = set()
     for wk in range(1, 46):
         rows = parse_fixture(fetcher('https://www.tff.org/' + FIX % (GRUP, wk)))
         if not rows:
@@ -191,15 +197,32 @@ def main(index='index.html', sw='sw.js', today=None, fetcher=None, dry=False):
             continue
         empty = 0
         for mid, d, t1, t2, sc in rows:
-            if not (is_us(t1) or is_us(t2)) or mid in have or not sc or d > today:
+            if not (is_us(t1) or is_us(t2)):
+                continue
+            print('FİKSTÜR hafta %d: %s %s - %s skor=%s%s' % (wk, d, norm(t1), norm(t2), sc or 'boş', ' (listede var)' if mid in have else ''))
+            if mid in have or mid in seen:
+                continue
+            seen.add(mid)
+            # skor fikstürde yazıyorsa bugüne kadar; yazmıyorsa (TFF girmemiş) yalnızca bugünden ÖNCEKİ günler
+            if sc:
+                if d > today:
+                    continue
+            elif d >= today:
                 continue
             home = 1 if is_us(t1) else 0
-            gh, ga_ = [int(x) for x in sc.split('-')]
-            gf, ga = (gh, ga_) if home else (ga_, gh)
             try:
                 mh = fetcher('%s?pageId=29&macId=%d' % (BASE, mid))
-                pl = parse_match(mh, home, gf, ga)
+                if sc:
+                    gh, ga_ = [int(x) for x in sc.split('-')]
+                    gf, ga = (gh, ga_) if home else (ga_, gh)
+                    pl = parse_match(mh, home, gf, ga)
+                else:
+                    pl, gf, ga = parse_match_full(mh, home)
+                    print('Skor fikstürde yok, maç sayfasındaki goller kullanıldı: %s %d-%d' % (d, gf, ga))
             except Exception as e:
+                if not sc and 'kadro bölümü yok' in str(e):
+                    print('Oynanmamış görünüyor (kadro yok): %s' % d)
+                    continue
                 problems.append('macId %d (%s, hafta %d): %s' % (mid, d, wk, e))
                 continue
             opp = tr_title(t2 if home else t1)
