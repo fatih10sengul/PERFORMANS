@@ -2302,6 +2302,7 @@ function rcWeekly(rows,fn){
   h.forEach(function(c,i){if(i===0)return;var m=String(c).trim().match(/^(\d{1,2})\.?\s*([A-Za-zÇĞİÖŞÜçğıöşü]+)\.?$/);if(!m)return;var mo=TRMON[fold(m[2]).slice(0,3)];if(!mo)return;
     var y=new Date().getFullYear(),d=new Date(y,mo-1,parseInt(m[1],10));if(d.getTime()-Date.now()>200*864e5)y--;
     cols.push({i:i,d:y+'-'+('0'+mo).slice(-2)+'-'+('0'+parseInt(m[1],10)).slice(-2)});});
+  if(cols.length<2){cols=[];h.forEach(function(c,i){if(i===0||typeof c==='number')return;var d=txDate(c);if(d)cols.push({i:i,d:d});});}
   if(cols.length<2)return null;
   var f=fold(fn),key=/cmj/.test(f)?'cmjH':/(^|[^a-z])sj/.test(String(fn).toLowerCase())||/sj/.test(f)?'sjH':'';
   if(!key)return null;
@@ -2533,6 +2534,10 @@ async function txRead(inp){
     try{rows=await txReadOne(f);}catch(e){txFiles.push({name:f.name,kind:'',label:'Dosya okunamadı'});continue;}
     if(rows.length<2){txFiles.push({name:f.name,kind:'',label:'Veri satırı bulunamadı'});continue;}
     var d=null;try{d=txDetect(rows,f.name);}catch(e){d=null;}
+    if(d&&d.kind==='weekly'){var wk=/cmj/.test(fold(f.name))?'cmjH':'sjH',have={};db.records.forEach(function(x){if(x.v&&x.v[wk]!=null)have[x.d]=1;});
+      var sk=[];d.recs=d.recs.filter(function(r){if(r.d&&have[r.d]){if(sk.indexOf(r.d)<0)sk.push(r.d);return false;}return true;});
+      var nd=[];d.recs.forEach(function(r){if(r.d&&nd.indexOf(r.d)<0)nd.push(r.d);});
+      d.label='Haftalık '+(wk==='cmjH'?'CMJ':'SJ')+' · '+(nd.length?'yeni: '+nd.map(trDate).join(', '):'yeni tarih yok')+(sk.length?' · zaten kayıtlı, atlandı: '+sk.sort().map(trDate).join(', '):'');}
     if(d){d.name=f.name;d.date=fnDate(f.name);d.own=d.recs.some(function(r){return r.d});txFiles.push(d);}
     else if(fl.length===1)generic=rows;
     else txFiles.push({name:f.name,kind:'',label:'Düzen tanınmadı (tek başına seçip eşleştir)'});
@@ -3315,7 +3320,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1794047002;
+var BUILD_ID=1794062133;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
