@@ -2484,6 +2484,11 @@ function txPrep(){
       var rk=id+'|'+cb[f+'d'],x=rowsM[rk];
       if(!x){x=rowsM[rk]={a:c.a||null,nk:c.nk||null,nm:c.name||c.a.n,d:cb[f+'d'],v:{},sv:{},n:0};order.push(rk);}
       x.v[f]=cb[f];});});
+  var have={},skd={};
+  db.records.forEach(function(r){if(r.v)Object.keys(r.v).forEach(function(k){if(r.v[k]!=null)have[k+'|'+r.d]=1;});});
+  order.forEach(function(k){var x=rowsM[k];Object.keys(x.v).forEach(function(f){if(have[f+'|'+x.d]){delete x.v[f];var lb=txFieldLabel(f).split(' · ')[0];(skd[x.d]=skd[x.d]||{})[lb]=1;}});});
+  order=order.filter(function(k){return Object.keys(rowsM[k].v).length+Object.keys(rowsM[k].sv).length>0;});
+  var skl=Object.keys(skd).sort().map(function(d){return trDate(d)+' ('+Object.keys(skd[d]).join(', ')+')';});
   var out=order.map(function(k){var x=rowsM[k];x.n=Object.keys(x.v).length+Object.keys(x.sv).length;vals+=x.n;return x;});
   var conf=0;
   out.forEach(function(x){if(!x.a)return;
@@ -2491,7 +2496,7 @@ function txPrep(){
     if(ex)Object.keys(x.v).forEach(function(k){if(k!=='kilo'&&k!=='boy'&&ex.v[k]!=null&&Math.abs(ex.v[k]-x.v[k])>1e-9)conf++;});
     var es=SV().filter(function(r){return r.a===x.a.id&&r.d===x.d})[0];
     if(es)Object.keys(x.sv).forEach(function(k){if(es[k]!=null&&Math.abs(es[k]-x.sv[k])>1e-9)conf++;});});
-  return {conf:conf,rows:out,badv:badv,unk:Object.keys(unk),bad:bad,vals:vals,amb:amb,newA:Object.keys(newM).map(function(k){return newM[k]}),upA:Object.keys(upA).map(function(k){return upA[k]})};
+  return {skl:skl,conf:conf,rows:out,badv:badv,unk:Object.keys(unk),bad:bad,vals:vals,amb:amb,newA:Object.keys(newM).map(function(k){return newM[k]}),upA:Object.keys(upA).map(function(k){return upA[k]})};
 }
 function collapseBody(){
   var ch=false,by={};
@@ -2609,6 +2614,7 @@ function txPanel(){
   txAmbKeys=P.amb.map(function(a){return a.k});
   P.rows.forEach(function(x){if(x.a&&db.records.some(function(r){return r.a===x.a.id&&r.d===x.d}))dup++;});
   if(P.conf)h+='<p class="c-warn" style="margin:10px 0 4px">'+P.conf+' değer, aynı sporcu ve aynı tarihte zaten farklı bir değerle kayıtlı. Varsayılan olarak mevcut değerler korunur.</p><label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox"'+(txOver?' checked':'')+' onchange="txOver=this.checked;render()" style="width:auto"> Bu değerlerin üzerine yaz</label>';
+  if(P.skl.length)h+='<p class="dim" style="margin:10px 0 4px">Zaten kayıtlı olduğu için atlandı: '+esc(P.skl.join(', '))+'</p>';
   if(P.amb.length){
     h+='<p class="c-warn" style="margin:12px 0 4px"><b>'+P.amb.length+' ismin hangi sporcu olduğu belirsiz.</b> Seç ya da atla:</p>'+P.amb.map(function(a,i){
       return '<div class="row" style="margin:4px 0"><span style="min-width:110px"><b>'+esc(a.nm.trim())+'</b></span><select aria-label="'+esc(a.nm)+' kim" onchange="txAmbSet('+i+',this.value)"><option value="">Seç…</option>'+a.c.map(function(c){return '<option value="'+esc(cid(c))+'"'+(txAmb[a.k]===cid(c)?' selected':'')+'>'+esc(c.a?c.a.n:c.name)+'</option>'}).join('')+'<option value="skip"'+(txAmb[a.k]==='skip'?' selected':'')+'>Atla</option></select></div>';}).join('');
@@ -3320,7 +3326,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1794062133;
+var BUILD_ID=1794063556;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
