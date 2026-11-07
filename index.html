@@ -643,7 +643,7 @@ function hrAvg(aid){var r=db.gps.filter(function(g){return g.a===aid&&g.hr!=null
 var teamMode='rank',cmpIds=[null,null,null],_vt=vTeam;
 function okId(id){return id&&db.athletes.some(function(x){return x.id===id});}
 vTeam=function(){
-  var tog='<div class="row" style="margin-bottom:8px"><button class="btn small'+(teamMode==='rank'?'':' ghost')+'" onclick="teamMode=\'rank\';render()">Sıralama</button><button class="btn small'+(teamMode==='cmp'?'':' ghost')+'" onclick="teamMode=\'cmp\';render()">Karşılaştırma</button><button class="btn small ghost" onclick="teamPdf()">Takım PDF raporu</button></div>';
+  var tog='<div class="row" style="margin-bottom:8px"><button class="btn small'+(teamMode==='rank'?'':' ghost')+'" onclick="teamMode=\'rank\';render()">Sıralama</button><button class="btn small'+(teamMode==='cmp'?'':' ghost')+'" onclick="teamMode=\'cmp\';render()">Karşılaştırma</button><button class="btn small ghost" onclick="teamPdfCur()">'+(teamMode==='cmp'?'Karşılaştırma PDF':M[teamKey][0]+' PDF')+'</button><button class="btn small ghost" onclick="teamPdf()">Tüm testler PDF</button></div>';
   if(teamMode==='cmp')return '<h1>Takım</h1><p class="sub">Sporcuları yan yana karşılaştır</p>'+tog+vCmp();
   return _vt().replace('</p>','</p>'+tog);
 };
@@ -707,6 +707,28 @@ async function makePdf(html,filename){
   }catch(e){if(e&&e.code==='declined')return;toast('PDF oluşturulamadı.');}
 }
 function athPdf(){var a=db.athletes.find(function(x){return x.id===selA});if(a)makePdf(athRep(a),a.n.replace(/\s+/g,'-')+'-rapor.pdf');}
+function teamMeasRep(k){
+  var m=M[k],dir=m[2],rows=act().map(function(a){var s=series(a.id,k);if(!s.length)return null;var l=s[s.length-1],pv=s.length>1?s[s.length-2]:null,vs=s.map(function(x){return x.v}),bs=dir==='low'?Math.min.apply(null,vs):Math.max.apply(null,vs);return {a:a,l:l,p:pv,b:bs,n:s.length};}).filter(Boolean);
+  rows.sort(function(x,y){return dir==='low'?x.l.v-y.l.v:y.l.v-x.l.v;});
+  var h=RS+'<div class="r"><h1>'+esc(m[0])+'</h1><div class="m">'+esc((T.filter(function(g){return g.m.indexOf(k)>=0})[0]||{n:''}).n)+(m[1]?' · birim: '+esc(m[1]):'')+' · '+rows.length+' sporcu · Rapor tarihi '+trDate(today())+'</div>';
+  if(!rows.length)return h+'<p>Bu ölçüm için kayıt yok.</p></div>';
+  var mean=rows.reduce(function(t,r){return t+r.l.v;},0)/rows.length;
+  h+='<h2>Takım ortalaması: '+fmt(k,mean)+(m[1]?' '+esc(m[1]):'')+'</h2><table><thead><tr><th style="text-align:left">#</th><th style="text-align:left">Sporcu</th><th>Son test</th><th>Test tarihi</th></tr></thead><tbody>';
+  rows.forEach(function(r,i){
+    h+='<tr><td style="text-align:left">'+(i+1)+'</td><td style="text-align:left">'+esc(r.a.n)+'</td><td><b>'+fmt(k,r.l.v)+'</b></td><td>'+trDate(r.l.d)+'</td></tr>';});
+  return h+'</tbody></table><p class="m" style="margin-top:10px">Her sporcunun en son yapılan testi gösterilir. En iyiden başlayarak sıralıdır.</p></div>';
+}
+function teamCmpRep(){
+  var ids=cmpIds.filter(Boolean),nm=function(id){return esc(db.athletes.find(function(x){return x.id===id}).n);};
+  var h=RS+'<div class="r"><h1>Karşılaştırma</h1><div class="m">'+ids.map(nm).join(' · ')+' · Rapor tarihi '+trDate(today())+'</div><table><thead><tr><th style="text-align:left">Ölçüm</th>'+ids.map(function(id){return '<th>'+nm(id).split(' ')[0]+'</th>';}).join('')+'</tr></thead><tbody>';
+  T.forEach(function(g){g.m.forEach(function(k){var v=ids.map(function(id){return lastV(id,k)});if(!v.some(function(x){return x!=null}))return;var nn=v.filter(function(x){return x!=null}),best=M[k][2]==='none'||nn.length<2?null:(M[k][2]==='low'?Math.min.apply(null,nn):Math.max.apply(null,nn));
+    h+='<tr><td style="text-align:left">'+esc(M[k][0])+(M[k][1]?' ('+esc(M[k][1])+')':'')+'</td>'+v.map(function(x){return '<td'+(x!=null&&x===best?' class="g"':'')+'>'+(x==null?'-':'<b>'+fmt(k,x)+'</b>')+'</td>';}).join('')+'</tr>';});});
+  return h+'</tbody></table><p class="m" style="margin-top:10px">Yeşil değer, seçilenler arasında en iyisidir.</p></div>';
+}
+function teamPdfCur(){
+  if(teamMode==='cmp'){if(cmpIds.filter(Boolean).length<2){toast('Önce iki sporcu seç.');return;}makePdf(teamCmpRep(),'karsilastirma.pdf');return;}
+  makePdf(teamMeasRep(teamKey),(M[teamKey][0]||teamKey).replace(/[^A-Za-z0-9ÇçĞğİıÖöŞşÜü]+/g,'-')+'-takim.pdf');
+}
 function teamPdf(){if(!db.athletes.length){toast('Önce sporcu ekle.');return;}makePdf(teamRep(),'takim-raporu.pdf');}
 var _vp4=vProfile;
 vProfile=function(){var h=_vp4();return view==='profile'?h.replace('Test gir</button></div>','Test gir</button><button class="btn ghost" onclick="athPdf()">PDF rapor</button></div>'):h;};
@@ -3293,7 +3315,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1794045853;
+var BUILD_ID=1794046463;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
