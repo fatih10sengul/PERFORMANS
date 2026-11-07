@@ -957,7 +957,7 @@ function surveyForm(a){
 function submitSurvey(){
   var a=ath(selA),s=svState,dur=NaN,sl=parseFloat(String(s.sleep).replace(',','.')),pain=Object.keys(painSel).map(function(k){return {k:k,v:painSel[k]}});
   if(!isFinite(sl)&&s.fat==null&&s.sore==null&&!pain.length){toast('En az bir alanı doldur.');return;}
-  var rec={id:uid(),a:a.id,d:today(),rpe:null,dur:null,sleep:isFinite(sl)?sl:null,fat:s.fat,sore:s.sore,pain:pain,seen:false};
+  var rec={id:uid(),a:a.id,d:today(),ct:new Date().toISOString(),rpe:null,dur:null,sleep:isFinite(sl)?sl:null,fat:s.fat,sore:s.sore,pain:pain,seen:false};
   db.surveys=SV().filter(function(x){return !(x.a===a.id&&x.d===rec.d)});db.surveys.push(rec);
   svState=newSv();painSel={};save();render();toast('Anket gönderildi, antrenörüne iletildi');
 }
@@ -998,6 +998,7 @@ function svScores(s){
   if(!rows.length)return '';
   return '<div class="svsc">'+rows.map(function(r){var c=r[3]==null?'':(r[3]>=7?'c-bad':r[3]>=4?'c-warn':'c-low');return '<div class="svr"><span>'+r[0]+'</span><b class="'+c+'">'+esc(String(r[1]).replace('.',','))+'<small>'+r[2]+'</small></b></div>';}).join('')+'</div>';
 }
+function svTime(t){var d=new Date(t);return isNaN(d)?'':d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});}
 function svpHtml(day,aid){
   var L=SV().filter(function(s){return s.d===day&&ath(s.a)&&(!aid||s.a===aid);});
   var mx=function(s){return s.pain.reduce(function(m,p){return Math.max(m,p.v);},0);};
@@ -1049,7 +1050,7 @@ function vInbox(){
   var list=dayAll.filter(function(s){return inboxAll||s.pain.length}).sort(function(x,y){return (x.seen-y.seen)||(String(ath(x.a)&&ath(x.a).n).localeCompare(String(ath(y.a)&&ath(y.a).n)))});
   if(!list.length)return h+'<div class="empty"><p>'+(inboxAll?'Bu gün anket gelmemiş.':'Bu gün ağrı bildirimi yok.')+'</p></div>'+hm;
   h+='<div class="list">'+list.map(function(s){var a=ath(s.a);if(!a)return '';var fl=flags(s),load=s.rpe!=null&&s.dur?Math.round(s.rpe*s.dur):null;
-    return '<div class="rank" style="'+(s.seen?'':'border-left:4px solid var(--bad);padding-left:10px')+'"><div class="top"><span class="who">'+av(a,36)+'<span><b>'+esc(a.n)+'</b><br><span class="dim">'+dlabel(s.d)+'</span></span></span>'+(s.seen?'<span class="dim">Görüldü</span>':'<span class="chip c-bad">Yeni</span>')+'</div>'
+    return '<div class="rank" style="'+(s.seen?'':'border-left:4px solid var(--bad);padding-left:10px')+'"><div class="top"><span class="who">'+av(a,36)+'<span><b>'+esc(a.n)+'</b><br><span class="dim">'+dlabel(s.d)+'</span></span></span>'+'<span style="text-align:right">'+(s.ct?'<span class="dim" style="font-size:12px">'+svTime(s.ct)+'</span><br>':'')+(s.seen?'<span class="dim">Görüldü</span>':'<span class="chip c-bad">Yeni</span>')+'</span></div>'
     +painMaps(s)+svScores(s)
     +(s.pain.length?'<div class="row" style="gap:6px">'+s.pain.map(function(p){return '<span class="chip '+(p.v>=7?'c-bad':p.v>=4?'c-warn':'c-low')+'">'+esc(regLabel(p.k))+' '+p.v+'/10</span>'}).join('')+'</div>':'')
     +(fl.length?'<p style="margin:6px 0 0"><b class="c-bad">'+fl.join(', ')+'</b></p>':'')
@@ -1820,7 +1821,7 @@ async function fetchAll(table){
 function mapRec(r){return {id:r.id,a:r.athlete_id,d:r.d,v:r.v||{}};}
 function mapGps(r){var o={id:r.id,a:r.athlete_id,d:r.d};GK.forEach(function(k){if(r[k]!=null)o[k]=Number(r[k])});return o;}
 function num(v){return v==null?null:Number(v);}
-function mapSurvey(r){return {id:r.id,a:r.athlete_id,d:r.d,rpe:num(r.rpe),dur:num(r.dur),sleep:num(r.sleep),fat:r.fat==null?null:r.fat,sore:r.sore==null?null:r.sore,pain:r.pain||[],seen:!!r.seen};}
+function mapSurvey(r){return {id:r.id,a:r.athlete_id,d:r.d,rpe:num(r.rpe),dur:num(r.dur),sleep:num(r.sleep),fat:r.fat==null?null:r.fat,sore:r.sore==null?null:r.sore,pain:r.pain||[],seen:!!r.seen,ct:r.created_at||null};}
 function mapProg(days,ex){
   var pr={};(days||[]).forEach(function(r){pr[r.day]={title:r.title||'',ex:[]}});
   (ex||[]).slice().sort(function(a,b){return a.day-b.day||a.sort_order-b.sort_order}).forEach(function(r){
@@ -3292,7 +3293,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1793991636;
+var BUILD_ID=1794044625;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
