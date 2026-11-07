@@ -3326,7 +3326,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1794063556;
+var BUILD_ID=1794064134;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
@@ -4179,12 +4179,12 @@ var JERED=false;
 var PSTAT={m:['Müdahale','#e5484d',0],i:['İzle','#f5a524',1],s:['Sakat','#6e8bb8',2],h:['Hazır','#30a46c',3]};
 function pStat(a){
   if(isInj(a))return 's';
-  var td=today(),lim=dnum(td)-2,hiP=false,anyP=false;
-  SV().forEach(function(x){if(x.a!==a.id||dnum(x.d)<lim)return;(x.pain||[]).forEach(function(p){anyP=true;if(p.v>=7)hiP=true;});});
+  var td=today(),lim=dnum(td)-2,mx=0;
+  SV().forEach(function(x){if(x.a!==a.id||dnum(x.d)<lim)return;(x.pain||[]).forEach(function(p){if(p.v>mx)mx=p.v;});});
   var e=null;try{e=ewma(a.id,'td');}catch(er){}
-  var hiL=!!(e&&e.r!=null&&e.n>=28&&e.r>1.5);
-  if(hiP||(hiL&&anyP))return 'm';
-  if(hiL||anyP)return 'i';
+  var hiL=!!(e&&e.r!=null&&e.n>=28&&e.r>1.45);
+  if(mx>=7||hiL)return 'm';
+  if(mx>=5)return 'i';
   return 'h';
 }
 function pSur(a){var p=String(a.n||'').trim().split(/\s+/);return (p.length>1?p[p.length-1]:p[0]||'').toLocaleUpperCase('tr');}
@@ -4217,7 +4217,7 @@ function pTiles(){
     h+='<div class="list">'+L.slice().sort(function(x,y){return pSur(x.a).localeCompare(pSur(y.a),'tr');}).map(function(x){return '<div class="rank"><div class="top"><span>'+esc(x.a.n)+'</span><input inputmode="numeric" aria-label="GPS numarası" style="width:72px;text-align:center" maxlength="2" value="'+esc(J[x.a.id]||'')+'" onchange="jerSet(\''+x.a.id+'\',this.value)"></div></div>';}).join('')+'</div>';
   }else{
     h+='<div class="ptiles">'+L.map(function(x){var no=J[x.a.id];return '<button type="button" class="ptile" style="--st:'+PSTAT[x.s][1]+'" aria-label="'+esc(x.a.n)+', '+PSTAT[x.s][0]+'" onclick="pCard(\''+x.a.id+'\')"><b class="pt-no">'+esc(no||pIni(x.a))+'</b><span class="pt-nm">'+esc(pSur(x.a))+'</span></button>';}).join('')+'</div>';
-    h+='<p class="dim" style="margin:10px 0 0;font-size:12px">Müdahale: yüksek şiddetli ağrı, ya da yüksek yük ve ağrı birlikte. İzle: tek sinyal (son 3 günde ağrı bildirimi veya ACWR 1,5 üstü). Sakat: aktif sakatlık.</p>';
+    h+='<p class="dim" style="margin:10px 0 0;font-size:12px">Müdahale: son 3 günde 7 ve üstü ağrı ya da ACWR 1,45 üstü (biri yeterli). İzle: son 3 günde 5-6 ağrı. Sakat: aktif sakatlık. Diğerleri hazır.</p>';
   }
   return h+'</div>';
 }
@@ -4262,7 +4262,7 @@ function pFind(a){
   SV().forEach(function(x){if(x.a!==a.id||dnum(x.d)<lim)return;(x.pain||[]).forEach(function(p){pains.push(p);if(p.v>mx)mx=p.v;});});
   if(isInj(a))f.push('Aktif sakatlık'+(a.inj&&a.inj.type?': '+a.inj.type:''));
   if(pains.length){var ks=[];pains.forEach(function(p){if(p.k){var lb=regLabel(p.k);if(ks.indexOf(lb)<0)ks.push(lb);}});f.push('Ağrı bildirimi '+mx+'/10'+(ks.length?' ('+ks.slice(0,2).join(', ')+')':''));}
-  if(rv!=null&&rv>1.5)f.push('Yük oranı yüksek (ACWR '+rv.toFixed(2).replace('.',',')+') → bu hafta yükü gözden geçir');
+  if(rv!=null&&rv>1.45)f.push('Yük oranı yüksek (ACWR '+rv.toFixed(2).replace('.',',')+') → bu hafta yükü gözden geçir');
   else if(rv!=null&&rv<0.8)f.push('Eksik yük (ACWR '+rv.toFixed(2).replace('.',',')+') → yük hedefini artır');
   var seen=false;SV().forEach(function(x){if(x.a===a.id&&x.d===td)seen=true;});
   if(!seen)f.push('Bugün anket doldurmadı');
