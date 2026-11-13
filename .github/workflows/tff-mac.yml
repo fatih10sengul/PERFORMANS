@@ -2,7 +2,7 @@ name: TFF maç verisi
 
 on:
   schedule:
-    - cron: '0 14 * * 4'   # Her Perşembe 17:00 (Türkiye saati)
+    - cron: '0 14 * * *'   # Her gün 17:00 (Türkiye saati)
   workflow_dispatch:        # Elle çalıştırma düğmesi
 
 permissions:
