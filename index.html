@@ -1054,15 +1054,24 @@ function painMaps(s){
   return '<div class="'+(sd.length>1?'two':'')+'" style="margin:8px 0;'+(sd.length>1?'':'max-width:48%;margin-left:auto;margin-right:auto')+'">'+sd.map(function(v){return '<div>'+bodySvg(v,'heat',d)+'</div>';}).join('')+'</div>';
 }
 function vInbox(){
-  var h='<h1>Gelen kutusu</h1>',lim=dnum(today())-3,cnt={},seen={};
-  SV().forEach(function(s){if(dnum(s.d)<=lim)return;s.pain.forEach(function(p){if(!(p.v>=5))return;var u=s.a+'|'+s.d+'|'+p.k;if(!seen[u]){seen[u]=1;cnt[p.k]=(cnt[p.k]||0)+1;}});});
-  var mx=Math.max.apply(null,Object.keys(cnt).map(function(k){return cnt[k]}).concat([1])),heat={};Object.keys(cnt).forEach(function(k){heat[k]=cnt[k]/mx});
-  var top=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a]}).slice(0,5);
-  var hm='';
-  if(top.length)hm+='<h3 class="ct">Takım ağrı haritası, son 3 gün (5 ve üstü)</h3><div class="two"><div>'+bodySvg('F','heat',heat)+'</div><div>'+bodySvg('B','heat',heat)+'</div></div>'+top.map(function(k){return '<div class="rank"><div class="top"><span>'+esc(regLabel(k))+'</span><b>'+cnt[k]+' bildirim</b></div></div>'}).join('');
+  var h='<h1>Gelen kutusu</h1>';
   var n=unseenN();
   if(!inboxDay)inboxDay=today();
   var dayAll=SV().filter(function(s){return s.d===inboxDay;}),dayPain=dayAll.filter(function(s){return s.pain.length;});
+  var cnt={},seen={};
+  dayAll.forEach(function(s){s.pain.forEach(function(p){var u=s.a+'|'+p.k;if(!seen[u]){seen[u]=1;cnt[p.k]=(cnt[p.k]||0)+1;}});});
+  var mx=Math.max.apply(null,Object.keys(cnt).map(function(k){return cnt[k]}).concat([1])),heat={};Object.keys(cnt).forEach(function(k){heat[k]=cnt[k]/mx});
+  var top=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a]}).slice(0,5);
+  function avg(k){var v=dayAll.map(function(s){return s[k]}).filter(function(x){return x!=null&&!isNaN(x)});return v.length?{m:v.reduce(function(a,b){return a+b},0)/v.length,n:v.length}:null;}
+  function fmt(x){return (Math.round(x*10)/10).toString().replace('.',',');}
+  var hm='';
+  if(dayAll.length){
+    var av1=[['Yorgunluk',avg('fat'),'/10'],['Kas ağrısı',avg('sore'),'/10'],['Uyku',avg('sleep'),' sa']].filter(function(r){return r[1];});
+    hm+='<h3 class="ct">'+esc(dlabel(inboxDay))+' ağrı haritası</h3>';
+    if(top.length)hm+='<div class="two"><div>'+bodySvg('F','heat',heat)+'</div><div>'+bodySvg('B','heat',heat)+'</div></div>'+top.map(function(k){return '<div class="rank"><div class="top"><span>'+esc(regLabel(k))+'</span><b>'+cnt[k]+' sporcu</b></div></div>'}).join('');
+    else hm+='<p class="dim">Bu gün ağrı işaretlenmemiş.</p>';
+    if(av1.length)hm+='<h3 class="ct" style="margin-top:14px">Günün ortalaması</h3><div class="svsc">'+av1.map(function(r){var c=r[0]==='Uyku'?'':(r[1].m>=7?'c-bad':r[1].m>=4?'c-warn':'c-low');return '<div class="svr"><span>'+r[0]+' <small class="dim">('+r[1].n+' sporcu)</small></span><b class="'+c+'">'+fmt(r[1].m)+'<small>'+r[2]+'</small></b></div>';}).join('')+'</div>';
+  }
   var other=SV().filter(function(s){return s.d!==inboxDay&&s.pain.length&&!s.seen;}),oLast=other.reduce(function(m,s){return s.d>m?s.d:m;},'');
   h+='<div class="dbar"><button class="btn small ghost" aria-label="Önceki gün" onclick="inboxDay=dAdd(inboxDay,-1);render()">◀</button><label class="dpick"><b>'+esc(dlabel(inboxDay))+'</b><input type="date" value="'+inboxDay+'" onchange="if(this.value){inboxDay=this.value;render();}"></label><button class="btn small ghost" aria-label="Sonraki gün" onclick="inboxDay=dAdd(inboxDay,1);render()">▶</button>'+(inboxDay!==today()?'<button class="btn small" onclick="inboxDay=today();render()">Bugün</button>':'')+'</div>';
   h+='<div class="row" style="margin:8px 0 0"><button class="btn small ghost" onclick="inboxPdf()">Takım raporu PDF</button></div>';
@@ -3363,7 +3372,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1794760114;
+var BUILD_ID=1794761023;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
