@@ -1932,7 +1932,32 @@ function showLogin(){
     (up&&!st?'<label for="au-c">Davet kodu</label><input id="au-c" autocapitalize="off" autocomplete="off" placeholder="12 haneli kod">':'')+
     '<div id="au-msg" class="au-msg" role="alert"></div>'+
     '<div class="row" style="margin-top:14px"><button class="btn" id="au-go" onclick="'+(up?'doSignUp()':'doSignIn()')+'">'+(up?'Hesap oluştur':'Giriş yap')+'</button></div>'+
-    '<p class="dim" style="margin:16px 0 0"><button class="back" style="margin:0;padding:0" onclick="authMode=\''+(up?'in':'up')+'\';showLogin()">'+(up?'Zaten hesabım var, giriş yap':'Sporcuyum, davet koduyla kayıt ol')+'</button></p>'+(up?'':'<p class="dim" style="margin:10px 0 0"><button class="back" style="margin:0;padding:0" onclick="authMode=\'st\';showLogin()">Antrenörüm, hesap oluştur</button></p>')+(st?'<p class="dim" style="margin:10px 0 0"><button class="back" style="margin:0;padding:0" onclick="authMode=\'up\';showLogin()">Sporcuyum, davet koduyla kayıt ol</button></p>':'')+'</div>');
+    '<p class="dim" style="margin:16px 0 0"><button class="back" style="margin:0;padding:0" onclick="authMode=\''+(up?'in':'up')+'\';showLogin()">'+(up?'Zaten hesabım var, giriş yap':'Sporcuyum, davet koduyla kayıt ol')+'</button></p>'+(authMode==='in'?'<p class="dim" style="margin:10px 0 0"><button class="back" style="margin:0;padding:0" onclick="showForgot()">Şifremi unuttum</button></p>':'')+(up?'':'<p class="dim" style="margin:10px 0 0"><button class="back" style="margin:0;padding:0" onclick="authMode=\'st\';showLogin()">Antrenörüm, hesap oluştur</button></p>')+(st?'<p class="dim" style="margin:10px 0 0"><button class="back" style="margin:0;padding:0" onclick="authMode=\'up\';showLogin()">Sporcuyum, davet koduyla kayıt ol</button></p>':'')+'</div>');
+}
+function showForgot(){
+  authBox('<p class="sub">E-postanı yaz, sana şifre yenileme bağlantısı gönderelim.</p><div class="form"><label for="au-e">E-posta</label><input id="au-e" type="email" autocomplete="email" inputmode="email" autocapitalize="off"><div id="au-msg" class="au-msg" role="alert"></div><div class="row" style="margin-top:14px"><button class="btn" id="au-go" onclick="doForgot()">Bağlantı gönder</button></div><p class="dim" style="margin:16px 0 0"><button class="back" style="margin:0;padding:0" onclick="authMode=\'in\';showLogin()">Girişe dön</button></p></div>');
+}
+async function doForgot(){
+  var e=document.getElementById('au-e').value.trim();
+  if(!e){authMsg('E-posta gerekli.');return;}
+  busyBtn(true);authMsg('');
+  var r=await SBC.auth.resetPasswordForEmail(e,{redirectTo:location.origin+location.pathname});
+  busyBtn(false);
+  if(r.error){authMsg(trErr(r.error));return;}
+  authMsg('Bağlantı gönderildi. E-postanı kontrol et (gelmezse gereksiz/spam klasörüne de bak), bağlantıya tıklayıp yeni şifreni belirle.',true);
+}
+function showNewPass(){
+  authBox('<p class="sub">Yeni şifreni belirle.</p><div class="form"><label for="au-p">Yeni şifre (en az 8 karakter)</label><input id="au-p" type="password" autocomplete="new-password"><label for="au-p2">Yeni şifre (tekrar)</label><input id="au-p2" type="password" autocomplete="new-password"><div id="au-msg" class="au-msg" role="alert"></div><div class="row" style="margin-top:14px"><button class="btn" id="au-go" onclick="doNewPass()">Şifreyi kaydet</button></div></div>');
+}
+async function doNewPass(){
+  var p=document.getElementById('au-p').value,p2=document.getElementById('au-p2').value;
+  if(p.length<8){authMsg('Şifre en az 8 karakter olmalı.');return;}
+  if(p!==p2){authMsg('İki şifre aynı değil.');return;}
+  busyBtn(true);authMsg('');
+  var r=await SBC.auth.updateUser({password:p});
+  busyBtn(false);
+  if(r.error){authMsg(trErr(r.error));return;}
+  boot();
 }
 function showClaim(msg){
   authBox('<p class="sub">Hesabın hazır. Sporcuysan antrenörünün verdiği davet kodunu gir. Antrenör olarak kaydolduysan, ana antrenör hesabını onaylayana kadar bekle, sonra uygulamayı yeniden aç.</p><div class="form"><label for="au-c">Davet kodu</label><input id="au-c" autocapitalize="off" autocomplete="off" placeholder="12 haneli kod"><div id="au-msg" class="au-msg bad" role="alert">'+esc(msg||'')+'</div><div class="row" style="margin-top:14px"><button class="btn" onclick="doClaim()">Devam et</button><button class="btn ghost" onclick="doSignOut()">Çıkış</button></div></div>');
@@ -2058,6 +2083,15 @@ async function boot(){
       if(!window.supabase){showFatal('Bağlantı kütüphanesi yüklenemedi. İnternetini kontrol edip yeniden dene.');return;}
       SBC=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
     }
+    var hh=location.hash||'';
+    if(/type=recovery/.test(hh)&&/access_token=/.test(hh)){
+      var hp=new URLSearchParams(hh.replace(/^#/,''));
+      var sr=await SBC.auth.setSession({access_token:hp.get('access_token'),refresh_token:hp.get('refresh_token')||''});
+      try{history.replaceState(null,'',location.pathname+location.search);}catch(x){}
+      if(sr.error){showLogin();setTimeout(function(){authMsg('Yenileme bağlantısının süresi dolmuş. Tekrar iste.');},50);return;}
+      showNewPass();return;
+    }
+    if(/error_code=otp_expired|error=access_denied/.test(hh)){try{history.replaceState(null,'',location.pathname+location.search);}catch(x){}showLogin();setTimeout(function(){authMsg('Yenileme bağlantısının süresi dolmuş. "Şifremi unuttum" ile tekrar iste.');},50);return;}
     var s=await SBC.auth.getSession();
     if(!s.data||!s.data.session){showLogin();return;}
     var uid0=s.data.session.user.id;
@@ -3329,7 +3363,7 @@ vTeam=function(){
 };
 
 // Yeni sürüm yayınlanınca uygulama kendini yeniler (sporcu ve antrenör, kimsenin bir şey yapmasına gerek yok)
-var BUILD_ID=1794582107;
+var BUILD_ID=1794760114;
 async function checkUpdate(){
   try{
     if(document.hidden)return;
